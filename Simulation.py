@@ -178,7 +178,7 @@ class simulateOnlineData():
 
 					# every algorithm will estimate co-theta
 					
-					if alg_name == 'CoLinUCB' or alg_name == 'syncCoLinUCB':
+					if alg_name == 'CoLinUCB' or alg_name == 'syncCoLinUCB' or alg_name == 'AsyncCoLinUCB':
 						CoThetaDiffList_user[alg_name] += [self.getL2Diff(u.CoTheta, alg.getCoThetaFromCoLinUCB(u.id))]
 						ThetaDiffList_user[alg_name] += [self.getL2Diff(u.theta, alg.getLearntParameters(u.id))]		
 					elif alg_name == 'LinUCB'  or alg_name == 'GOBLin':
@@ -290,7 +290,6 @@ if __name__ == '__main__':
 	algorithms = {}
 	algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
 	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
-	algorithms['CoLinUCB'] = CoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	
