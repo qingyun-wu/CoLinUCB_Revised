@@ -40,40 +40,34 @@ class simulateOnlineData():
 		self.W = self.initializeW(epsilon)
 		self.GW = self.initializeGW(Gepsilon)
 		self.NoiseScale = NoiseScale
-	
-	# create user connectivity graph
-	def initializeW(self, epsilon):
+	def constructAdjMatrix(self):
 		n = len(self.users)	
-		'''
-		W = np.zeros(shape = (n, n))
+
+		G = np.zeros(shape = (n, n))
 		for ui in self.users:
 			sSim = 0
 			for uj in self.users:
 				sim = np.dot(ui.theta, uj.theta)
  				if ui.id == uj.id:
  					sim *= 1.0
-				W[ui.id][uj.id] = sim
+				G[ui.id][uj.id] = sim
 				sSim += sim
 				
-			W[ui.id] /= sSim
-			
+			G[ui.id] /= sSim
+			'''
 			for i in range(n):
-				print '%.3f' % W[ui.id][i],
+				print '%.3f' % G[ui.id][i],
 			print ''
-		'''
+			'''
+		return G
+		
 
-		#random generation
- 		a = np.ones(n-1) 
- 		b =np.ones(n);
- 		c = np.ones(n-1)
- 		k1 = -1
- 		k2 = 0
- 		k3 = 1
- 		A = np.diag(a, k1) + np.diag(b, k2) + np.diag(c, k3)
- 		G = A
- 		
+	# create user connectivity graph
+	def initializeW(self, epsilon):	
+ 		G = self.constructAdjMatrix()
+
  		L = csgraph.laplacian(G, normed = False)
- 		I = np.identity(n)
+ 		I = np.identity(n = G.shape[0])
  		W = I - epsilon * L  # W is a double stochastic matrix
  		#W = np.linalg.inv(W.T)
  		#W = sqrtm( np.linalg.inv(np.kron(W, np.identity(n=featureDimension))) )
@@ -81,19 +75,10 @@ class simulateOnlineData():
 		return W.T
 
 	def initializeGW(self, Gepsilon):
-		n = len(self.users)
 
-		a = np.ones(n-1) 
- 		b =np.ones(n);
- 		c = np.ones(n-1)
- 		k1 = -1
- 		k2 = 0
- 		k3 = 1
- 		A = np.diag(a, k1) + np.diag(b, k2) + np.diag(c, k3)
- 		G = A
- 		
+ 		G = self.constructAdjMatrix()	
  		L = csgraph.laplacian(G, normed = False)
- 		I = np.identity(n)
+ 		I = np.identity(n = G.shape[0])
  		GW = I + Gepsilon*L  # W is a double stochastic matrix
  		print GW
 		return GW.T
@@ -296,8 +281,8 @@ if __name__ == '__main__':
 	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 
-	algorithms['eGreedy'] = eGreedyAlgorithm(epsilon = eGreedy)
-	algorithms['UCB1'] = UCB1Algorithm()
+	#algorithms['eGreedy'] = eGreedyAlgorithm(epsilon = eGreedy)
+	#algorithms['UCB1'] = UCB1Algorithm()
 	
 	
 	simExperiment.runAlgorithms(algorithms)
