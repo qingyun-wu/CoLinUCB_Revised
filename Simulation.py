@@ -11,6 +11,7 @@ from Articles import *
 from Users import *
 #from Algori import *
 from Algori import *
+from eGreedyUCB1 import *
 from scipy.linalg import sqrtm
 import math
 
@@ -258,6 +259,8 @@ if __name__ == '__main__':
 	G_alpha = .2
 	G_lambda_ = 0.2
 	Gepsilon = 0.4
+	# Epsilon_greedy parameter
+	eGreedy = 0.3
 	
 	userFilename = os.path.join(sim_files_folder, "users_"+str(n_users)+"+dim-"+str(dimension)+ "Ugroups" + str(UserGroups)+".json")
 	
@@ -292,6 +295,9 @@ if __name__ == '__main__':
 	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
 	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+
+	algorithms['eGreedy'] = eGreedyAlgorithm(epsilon = eGreedy)
+	algorithms['UCB1'] = UCB1Algorithm()
 	
 	
 	simExperiment.runAlgorithms(algorithms)
