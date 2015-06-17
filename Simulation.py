@@ -64,13 +64,7 @@ class simulateOnlineData():
 
 	# create user connectivity graph
 	def initializeW(self, epsilon):	
- 		G = self.constructAdjMatrix()
-
- 		L = csgraph.laplacian(G, normed = False)
- 		I = np.identity(n = G.shape[0])
- 		W = I - epsilon * L  # W is a double stochastic matrix
- 		#W = np.linalg.inv(W.T)
- 		#W = sqrtm( np.linalg.inv(np.kron(W, np.identity(n=featureDimension))) )
+ 		W = self.constructAdjMatrix()
  		print W
 		return W.T
 
@@ -117,6 +111,13 @@ class simulateOnlineData():
 
 	def runAlgorithms(self, algorithms):
 		# get cotheta for each user
+		self.startTime = datetime.datetime.now()
+		timeRun = datetime.datetime.now().strftime('_%m_%d_%H_%M') 
+		#fileSig = ''
+		filenameWriteRegret = os.path.join(save_address, 'AccRegret' + timeRun + '.csv')
+		filenameWritePara = os.path.join(save_address, 'ParameterEstimation' + timeRun + '.csv')
+
+
 		self.CoTheta()
 		self.startTime = datetime.datetime.now()
 
@@ -132,20 +133,36 @@ class simulateOnlineData():
 		# Initialization
 		for alg_name in algorithms.iterkeys():
 			BatchAverageRegret[alg_name] = []
-			ThetaDiffList[alg_name] = []
+			
 			CoThetaDiffList[alg_name] = []
 			AccRegret[alg_name] = {}
+			if alg_name == 'syncCoLinUCB' or alg_name == 'AsyncCoLinUCB':
+					ThetaDiffList[alg_name] = []
 
 			for i in range(len(self.users)):
 				AccRegret[alg_name][i] = []
 		
 		userSize = len(self.users)
+		
+		with open(filenameWriteRegret, 'a+') as f:
+			f.write('Time(Iteration)')
+			f.write(',' + ','.join( [str(alg_name) for alg_name in algorithms.iterkeys()]))
+			f.write('\n')
+		with open(filenameWritePara, 'a+') as f:
+			f.write('Time(Iteration)')
+			f.write(',' + ','.join( [str(alg_name)+'CoTheta' for alg_name in algorithms.iterkeys()]))
+			f.write(','+ ','.join([str(alg_name)+'Theta' for alg_name in ThetaDiffList.iterkeys()]))
+			f.write('\n')
+		
+
+
 		# Loop begin
 		for iter_ in range(self.iterations):
 			# prepare to record theta estimation error
 			for alg_name in algorithms.iterkeys():
-				ThetaDiffList_user[alg_name] = []
 				CoThetaDiffList_user[alg_name] = []
+				if alg_name == 'syncCoLinUCB' or alg_name == 'AsyncCoLinUCB':
+					ThetaDiffList_user[alg_name] = []
 				
 			for u in self.users:
 				self.regulateArticlePool() # select random articles
@@ -164,7 +181,7 @@ class simulateOnlineData():
 
 					# every algorithm will estimate co-theta
 					
-					if alg_name == 'CoLinUCB' or alg_name == 'syncCoLinUCB' or alg_name == 'AsyncCoLinUCB':
+					if  alg_name == 'syncCoLinUCB' or alg_name == 'AsyncCoLinUCB':
 						CoThetaDiffList_user[alg_name] += [self.getL2Diff(u.CoTheta, alg.getCoThetaFromCoLinUCB(u.id))]
 						ThetaDiffList_user[alg_name] += [self.getL2Diff(u.theta, alg.getLearntParameters(u.id))]		
 					elif alg_name == 'LinUCB'  or alg_name == 'GOBLin':
@@ -175,7 +192,7 @@ class simulateOnlineData():
 
 			for alg_name in algorithms.iterkeys():
 				CoThetaDiffList[alg_name] += [sum(CoThetaDiffList_user[alg_name])/userSize]
-				if alg_name == 'CoLinUCB' or alg_name == 'syncCoLinUCB':
+				if alg_name == 'syncCoLinUCB' or alg_name == 'AsyncCoLinUCB':
 					ThetaDiffList[alg_name] += [sum(ThetaDiffList_user[alg_name])/userSize]
 				
 			if iter_%self.batchSize == 0:
@@ -184,28 +201,72 @@ class simulateOnlineData():
 				for alg_name in algorithms.iterkeys():
 					TotalAccRegret = sum(sum (u) for u in AccRegret[alg_name].itervalues())
 					BatchAverageRegret[alg_name].append(TotalAccRegret)
+				
+				with open(filenameWriteRegret, 'a+') as f:
+					f.write(str(iter_))
+					f.write(',' + ','.join([str(BatchAverageRegret[alg_name][-1]) for alg_name in algorithms.iterkeys()]))
+					f.write('\n')
+				with open(filenameWritePara, 'a+') as f:
+					f.write(str(iter_))
+					f.write(',' + ','.join([str(CoThetaDiffList[alg_name][-1]) for alg_name in algorithms.iterkeys()]))
+					f.write(','+ ','.join([str(ThetaDiffList[alg_name][-1]) for alg_name in ThetaDiffList.iterkeys()]))
+					f.write('\n')
+				
+
 		
 		# plot the results		
-		f, axa = plt.subplots(2, sharex=True)
+		#f, axa = plt.subplots(2, sharex=True)
 		# plot regard
-		for alg_name in algorithms.iterkeys():		
-			axa[0].plot(tim_, BatchAverageRegret[alg_name], label = alg_name)
-			axa[0].lines[-1].set_linewidth(1.5)
+		plt.figure(1)
+		for alg_name in algorithms.iterkeys():
+			if alg_name == 'LinUCB':		
+				plt.plot(tim_, BatchAverageRegret[alg_name],'+',label = 'LinUCB')
+		for alg_name in algorithms.iterkeys():
+			if alg_name == 'GOBLin':		
+				plt.plot(tim_, BatchAverageRegret[alg_name],',' ,label = 'GOB.Lin')
+		for alg_name in algorithms.iterkeys():
+			if alg_name == 'syncCoLinUCB':		
+				plt.plot(tim_, BatchAverageRegret[alg_name], ':',label = 'CoLin.sync')
+		for alg_name in algorithms.iterkeys():
+			if alg_name == 'AsyncCoLinUCB':		
+				plt.plot(tim_, BatchAverageRegret[alg_name], ':.',label = 'CoLin.async')
+
+			#plt.lines[-1].set_linewidth(1.5)
 			print '%s: %.2f' % (alg_name, BatchAverageRegret[alg_name][-1])
-		axa[0].legend()
-		axa[0].set_xlabel("Iteration")
-		axa[0].set_ylabel("Regret")
-		axa[0].set_title("Noise scale = " + str(self.NoiseScale))
+		plt.legend(loc='lower right',prop={'size':9})
+		plt.xlabel("Iteration")
+		plt.ylabel("Regret")
+		plt.title("Accumulated Regret")
+
+		plt.show()
 		
 		# plot the estimation error of co-theta
 		time = range(self.iterations)
+		plt.figure(2)
 		for alg_name in algorithms.iterkeys():
-			axa[1].plot(time, CoThetaDiffList[alg_name], label = alg_name + '_CoTheta')
-			axa[1].lines[-1].set_linewidth(1.5)	
-		axa[1].legend()
-		axa[1].set_xlabel("Iteration")
-		axa[1].set_ylabel("L2 Diff")
-		axa[1].set_yscale('log')
+			if alg_name == 'LinUCB':		
+				plt.plot(tim_, CoThetaDiffList[alg_name],'+',label = 'LinUCB')
+		for alg_name in algorithms.iterkeys():
+			if alg_name == 'GOBLin':		
+				plt.plot(tim_, CoThetaDiffList[alg_name],',' ,label = 'GOB.Lin')
+		for alg_name in algorithms.iterkeys():
+			if alg_name == 'syncCoLinUCB':		
+				plt.plot(tim_, CoThetaDiffList[alg_name], ':',label = 'CoLin.sync')
+				plt.plot(tim_, ThetaDiffList[alg_name], ':',label = 'CoLin.sync_Theta')
+		for alg_name in algorithms.iterkeys():
+			if alg_name == 'AsyncCoLinUCB':		
+				plt.plot(tim_, CoThetaDiffList[alg_name], ':.',label = 'CoLin.async')
+				plt.plot(tim_, ThetaDiffList[alg_name], ':',label = 'CoLin.async_Theta')
+		'''
+		for alg_name in algorithms.iterkeys():
+			plt.plot(time, CoThetaDiffList[alg_name], label = alg_name + '_CoTheta')
+			#plt.lines[-1].set_linewidth(1.5)
+		'''	
+		plt.legend(loc='upper right',prop={'size':6})
+		plt.xlabel("Iteration")
+		plt.ylabel("L2 Diff")
+		plt.yscale('log')
+		plt.title("Parameter estimation error")
 		'''
 		
 		# plot the estimation error of theta
@@ -223,13 +284,13 @@ class simulateOnlineData():
 
 
 if __name__ == '__main__':
-	iterations = 500
-	NoiseScale = .01
+	iterations = 100
+	NoiseScale = .1
 
 	dimension = 5
-	alpha  = 0.2 
-	lambda_ = 0.2   # Initialize A
-	epsilon = 0.4 # initialize W
+	alpha  = 0.2
+	lambda_ = 0.1   # Initialize A
+	epsilon = 0 # initialize W
 
 	n_articles = 1000
 	ArticleGroups = 5
@@ -238,13 +299,14 @@ if __name__ == '__main__':
 	UserGroups = 5	
 
 	poolSize = 10
-	batchSize = 10
+	batchSize = 1
 
 	# Parameters for GOBLin
-	G_alpha = .2
-	G_lambda_ = 0.2
-	Gepsilon = 0.4
+	G_alpha = alpha
+	G_lambda_ = lambda_
+	Gepsilon = 1
 	# Epsilon_greedy parameter
+ 
 	eGreedy = 0.3
 	
 	userFilename = os.path.join(sim_files_folder, "users_"+str(n_users)+"+dim-"+str(dimension)+ "Ugroups" + str(UserGroups)+".json")
