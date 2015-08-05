@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 import math
 from SPG import *
-from util_functions import vectorize, matrixize
 
 def vectorize(M):
 	temp = []

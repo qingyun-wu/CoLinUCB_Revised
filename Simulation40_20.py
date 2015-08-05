@@ -47,9 +47,7 @@ class simulateOnlineData():
 		self.batchSize = batchSize
 		
 		self.W = self.initializeW(epsilon)
-		self.W0 = self.initializeW0()
 		self.GW = self.initializeGW(Gepsilon)
-		self.GW0 = self.initializeGW0(Gepsilon)
 		self.NoiseScale = NoiseScale
 	def constructAdjMatrix(self):
 		n = len(self.users)	
@@ -100,18 +98,10 @@ class simulateOnlineData():
 
 	# create user connectivity graph
 	def initializeW(self, epsilon):	
- 		W = self.constructAdjMatrix()
- 		#W = self.constructSparseMatrix(3)   # sparse matrix top m users 
+ 		#W = self.constructAdjMatrix()
+ 		W = self.constructSparseMatrix(20)   # sparse matrix top m users 
  		print 'W.T', W.T
 		return W.T
-
-	def initializeW0(self):	
- 		temp = self.W+abs(self.matrixNoise())
-		W0 = temp
-		for i in range(self.W.shape[0]):
-			W0.T[i] = [float(j)/sum(temp.T[i]) for j in temp.T[i]]
-		print 'W0.T', W0.T
-		return W0
 
 	def initializeGW(self, Gepsilon):
 
@@ -122,23 +112,24 @@ class simulateOnlineData():
  		print 'GW', GW
 		return GW.T
 
-	def initializeGW0(self, Gepsilon):
- 		G0 = self.W0	
- 		L = csgraph.laplacian(G0, normed = False)
- 		I = np.identity(n = G0.shape[0])
- 		GW0 = I + Gepsilon*L  # W is a double stochastic matrix
- 		print 'GW0', GW0
-		return GW0
-
 	def getW(self):
 		return self.W
 	def getGW(self):
 		return self.GW
 	def getW0(self):
-		return self.W0
+		temp = self.W+abs(self.matrixNoise())
+		W0 = temp
+		for i in range(self.W.shape[0]):
+			W0.T[i] = [float(j)/sum(temp.T[i]) for j in temp.T[i]]
+		print 'W0.T', W0.T
+		return W0
 	def getGW0(self):
-		return self.GW0
-
+		temp = self.GW+abs(self.matrixNoise())
+		GW0 = temp
+		for i in range(self.GW.shape[0]):
+			GW0.T[i] = [float(j)/sum(temp.T[i]) for j in temp.T[i]]
+		print 'GW0.T', GW0.T
+		return GW0
 	def getTheta(self):
 		Theta = np.zeros(shape = (self.dimension, len(self.users)))
 		for i in range(len(self.users)):
@@ -337,7 +328,7 @@ class simulateOnlineData():
 if __name__ == '__main__':
 	iterations = 500
 	NoiseScale = .1
-	matrixNoise = .3
+	matrixNoise = 0.3
 
 	dimension = 5
 	alpha  = 0.2
@@ -348,7 +339,7 @@ if __name__ == '__main__':
 	n_articles = 1000
 	ArticleGroups = 5
 
-	n_users = 10
+	n_users = 80
 	UserGroups = 5	
 
 	poolSize = 10
@@ -393,11 +384,11 @@ if __name__ == '__main__':
 
 	algorithms = {}
 	
-	#algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
+	algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
 	
-	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW0() )
-	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
-	#algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
+	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
+	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	
 	#algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
 	#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
