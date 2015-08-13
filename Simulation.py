@@ -50,6 +50,7 @@ class simulateOnlineData(object):
 		self.GW = self.initializeGW(Gepsilon)
 		self.GW0 = self.initializeGW0(Gepsilon)
 		self.NoiseScale = NoiseScale
+		
 	def constructAdjMatrix(self):
 		n = len(self.users)	
 
@@ -57,55 +58,45 @@ class simulateOnlineData(object):
 		for ui in self.users:
 			sSim = 0
 			for uj in self.users:
-				sim = np.dot(ui.theta, uj.theta)
- 				if ui.id == uj.id:
- 					sim *= 1.0
+				sim = np.dot(ui.theta, uj.theta) # is dot product sufficient
 				G[ui.id][uj.id] = sim
 				sSim += sim
 				
 			G[ui.id] /= sSim
-			'''
-			for i in range(n):
-				print '%.3f' % G[ui.id][i],
-			print ''
-			'''
 		return G
-    
-    # top m users
+
 	def constructSparseMatrix(self, m):
 		n = len(self.users)	
 
 		G = np.zeros(shape = (n, n))
 		for ui in self.users:
-			sSim = 0
+			# construct the original connections
 			for uj in self.users:
 				sim = np.dot(ui.theta, uj.theta)
- 				if ui.id == uj.id:
- 					sim *= 1.0
- 				elif uj.id >=m or ui.id >=m:
- 					sim = 0
 				G[ui.id][uj.id] = sim
-				sSim += sim
-				
-			G[ui.id] /= sSim
-			'''
+			
+			# find out the top M similar users
+			similarity = sorted(G[ui.id], reverse=True)
+			threshold = similarity[m]
+			simSum = sum(similarity[0:m])
+			
+			# trim and renormalize the graph
 			for i in range(n):
-				print '%.3f' % G[ui.id][i],
-			print ''
-			'''
+				if G[ui.id][i] > threshold:
+					G[ui.id][i] /= simSum
+				else:
+					G[ui.id][i] = 0;
 		return G
-
-		
 
 	# create user connectivity graph
 	def initializeW(self, epsilon):	
- 		W = self.constructAdjMatrix()
- 		#W = self.constructSparseMatrix(3)   # sparse matrix top m users 
- 		print 'W.T', W.T
+		W = self.constructAdjMatrix()
+		#W = self.constructSparseMatrix(3)   # sparse matrix top m users 
+		print 'W.T', W.T
 		return W.T
 
 	def initializeW0(self):	
- 		temp = self.W+abs(self.matrixNoise())
+		temp = self.W + abs(self.matrixNoise())
 		W0 = temp
 		for i in range(self.W.shape[0]):
 			W0.T[i] = [float(j)/sum(temp.T[i]) for j in temp.T[i]]
@@ -113,20 +104,19 @@ class simulateOnlineData(object):
 		return W0
 
 	def initializeGW(self, Gepsilon):
-
- 		G = self.constructAdjMatrix()	
- 		L = csgraph.laplacian(G, normed = False)
- 		I = np.identity(n = G.shape[0])
- 		GW = I + Gepsilon*L  # W is a double stochastic matrix
- 		print 'GW', GW
+		G = self.constructAdjMatrix()	
+		L = csgraph.laplacian(G, normed = False)
+		I = np.identity(n = G.shape[0])
+		GW = I + Gepsilon*L  # W is a double stochastic matrix
+		print 'GW', GW
 		return GW.T
 
 	def initializeGW0(self, Gepsilon):
- 		G0 = self.W0	
- 		L = csgraph.laplacian(G0, normed = False)
- 		I = np.identity(n = G0.shape[0])
- 		GW0 = I + Gepsilon*L  # W is a double stochastic matrix
- 		print 'GW0', GW0
+		G0 = self.W0	
+		L = csgraph.laplacian(G0, normed = False)
+		I = np.identity(n = G0.shape[0])
+		GW0 = I + Gepsilon*L  # W is a double stochastic matrix
+		print 'GW0', GW0
 		return GW0
 
 	def getW(self):

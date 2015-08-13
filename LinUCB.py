@@ -1,6 +1,4 @@
 import numpy as np
-from scipy.linalg import sqrtm
-import math
 
 class LinUCBUserStruct:
 	def __init__(self, featureDimension, userID, lambda_):
@@ -28,7 +26,7 @@ class LinUCBUserStruct:
 		pta = mean + alpha * var
 		return pta
 
-
+#---------------LinUCB(fixed user order) algorithm---------------
 class LinUCBAlgorithm:
 	def __init__(self, dimension, alpha, lambda_, n):  # n is number of users
 		self.users = []
@@ -59,21 +57,17 @@ class LinUCBAlgorithm:
 		return self.users[userID].UserTheta
 
 
-class LinUCB_SelectUserAlgorithm:
+#-----------LinUCB select user algorithm-----------
+class LinUCB_SelectUserAlgorithm(LinUCBAlgorithm):
 	def __init__(self, dimension, alpha, lambda_, n):  # n is number of users
-		self.users = []
-		#algorithm have n users, each user has a user structure
-		for i in range(n):
-			self.users.append(LinUCBUserStruct(dimension, i, lambda_ )) 
-
-		self.dimension = dimension
-		self.alpha = alpha
+		LinUCBAlgorithm.__init__(self, dimension, alpha, lambda_, n)
 
 	def decide(self, pool_articles, AllUsers):
 		maxPTA = float('-inf')
 		articlePicked = None
 		userPicked = None
-		AllUsers = list(np.random.permutation(AllUsers)) 
+		
+		AllUsers = list(np.random.permutation(AllUsers)) # why do we need this permutation?
 		for x in pool_articles:
 			for user in AllUsers:
 				x_pta = self.users[user.id].getProb(self.alpha, self.users, x)
@@ -84,11 +78,3 @@ class LinUCB_SelectUserAlgorithm:
 					maxPTA = x_pta
 
 		return userPicked, articlePicked
-
-	def updateParameters(self, articlePicked, click, userID):
-		self.users[userID].updateParameters(articlePicked, click)
-		
-	def getLearntParameters(self, userID):
-		return self.users[userID].UserTheta
-
-

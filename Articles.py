@@ -5,15 +5,14 @@ from random import sample, randint
 import json
 
 class Article():	
-	def __init__(self, id, FV=None):
-		self.id = id
+	def __init__(self, aid, FV=None):
+		self.id = aid
 		self.featureVector = FV
 		
 
 class ArticleManager():
 	def __init__(self, dimension, n_articles, ArticleGroups, FeatureFunc, argv ):
-		self.signature = ""
-		#self.filename = filename
+		self.signature = "Article manager for simulation study"
 		self.dimension = dimension
 		self.n_articles = n_articles
 		self.ArticleGroups = ArticleGroups
@@ -31,8 +30,8 @@ class ArticleManager():
 		articles = []
 		with open(filename, 'r') as f:
 			for line in f:
-				id, featureVector = json.loads(line)
-				articles.append(Article(id, np.array(featureVector)))
+				aid, featureVector = json.loads(line)
+				articles.append(Article(aid, np.array(featureVector)))
 		return articles
 
 	#automatically generate masks for articles, but it may generate same masks

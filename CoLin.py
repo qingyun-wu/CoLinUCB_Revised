@@ -1,7 +1,4 @@
 import numpy as np
-from scipy.linalg import sqrtm
-import math
-
 from util_functions import vectorize, matrixize
 
 
@@ -9,14 +6,15 @@ class CoLinUCBUserSharedStruct(object):
 	def __init__(self, featureDimension, lambda_, userNum, W):
 		self.W = W
 		self.userNum = userNum
-		self.A = lambda_*np.identity(n = featureDimension*userNum)
-		self.CCA = np.identity(n = featureDimension*userNum)
+		self.A = lambda_*np.identity(n = featureDimension*userNum) # accumulated feature matrix, a dN by dN matrix
+		self.CCA = np.identity(n = featureDimension*userNum) # inverse of A, a dN by dN matrix
 		self.b = np.zeros(featureDimension*userNum)
 
 		self.UserTheta = np.zeros(shape = (featureDimension, userNum))
 		self.CoTheta = np.zeros(shape = (featureDimension, userNum))
 
 		self.BigW = np.kron(np.transpose(W), np.identity(n=featureDimension))
+		
 	def updateParameters(self, articlePicked, click,  userID):
 		pass
 	
@@ -30,6 +28,7 @@ class CoLinUCBUserSharedStruct(object):
 		pta = mean + alpha * var
 		return pta
 
+
 class AsyCoLinUCBUserSharedStruct(CoLinUCBUserSharedStruct):	
 	def updateParameters(self, articlePicked, click,  userID):	
 		X = vectorize(np.outer(articlePicked.featureVector, self.W.T[userID])) 
@@ -38,7 +37,7 @@ class AsyCoLinUCBUserSharedStruct(CoLinUCBUserSharedStruct):
 
 		self.UserTheta = matrixize(np.dot(np.linalg.inv(self.A), self.b), len(articlePicked.featureVector)) 
 		self.CoTheta = np.dot(self.UserTheta, self.W)
-		self.CCA = np.dot(np.dot(self.BigW , np.linalg.inv(self.A)), np.transpose(self.BigW))
+		self.CCA = np.dot(np.dot(self.BigW, np.linalg.inv(self.A)), np.transpose(self.BigW))
 		
 
 class SyCoLinUCBUserSharedStruct(CoLinUCBUserSharedStruct):
@@ -46,10 +45,10 @@ class SyCoLinUCBUserSharedStruct(CoLinUCBUserSharedStruct):
 		CoLinUCBUserSharedStruct.__init__(self, featureDimension, lambda_, userNum, W)
 		self.featureVectorMatrix = np.zeros(shape =(featureDimension, userNum))
 		self.reward = np.zeros(userNum)
+		
 	def updateParameters(self, articlePicked, click, userID):	
 		self.featureVectorMatrix.T[userID] = articlePicked.featureVector
 		self.reward[userID] = click
-		featureDimension = len(self.featureVectorMatrix.T[userID])
 		
 	def LateUpdate(self):
 		featureDimension = self.featureVectorMatrix.shape[0]
@@ -89,6 +88,7 @@ class CoLinUCBAlgorithm:
 				maxPTA = x_pta
 
 		return articlePicked
+	
 	def updateParameters(self, articlePicked, click, userID):
 		self.USERS.updateParameters(articlePicked, click, userID)
 		
@@ -107,6 +107,7 @@ class AsyCoLinUCBAlgorithm(CoLinUCBAlgorithm):
 		CoLinUCBAlgorithm.__init__(self, dimension, alpha, lambda_, n, W)
 		self.USERS = AsyCoLinUCBUserSharedStruct(dimension, lambda_, n, W)
 		
+		
 class syncCoLinUCBAlgorithm(CoLinUCBAlgorithm):
 	def __init__(self, dimension, alpha, lambda_, n, W):
 		CoLinUCBAlgorithm.__init__(self, dimension, alpha, lambda_, n, W)
@@ -115,13 +116,11 @@ class syncCoLinUCBAlgorithm(CoLinUCBAlgorithm):
 	def LateUpdate(self):
 		self.USERS.LateUpdate()
 
+
 #-----------CoLinUCB select user algorithm(only has asynchorize version)-----
-class CoLinUCB_SelectUserAlgorithm:
+class CoLinUCB_SelectUserAlgorithm(AsyCoLinUCBAlgorithm):
 	def __init__(self, dimension, alpha, lambda_, n, W):  # n is number of users
-		self.USERS = AsyCoLinUCBUserSharedStruct(dimension, lambda_, n, W)  
-		self.dimension = dimension
-		self.alpha = alpha
-		self.W = W
+		CoLinUCBAlgorithm.__init__(self, dimension, alpha, lambda_, n, W)
 
 	def decide(self, pool_articles, AllUsers):
 		maxPTA = float('-inf')
@@ -138,15 +137,3 @@ class CoLinUCB_SelectUserAlgorithm:
 					maxPTA = x_pta
 
 		return userPicked,articlePicked
-	def updateParameters(self, articlePicked, click, userID):
-		self.USERS.updateParameters(articlePicked, click, userID)
-		
-	def getLearntParameters(self, userID):
-		return self.USERS.UserTheta.T[userID]
-
-	def getCoThetaFromCoLinUCB(self, userID):
-		return self.USERS.CoTheta.T[userID]
-
-	def getA(self):
-		return self.USERS.A
-	
