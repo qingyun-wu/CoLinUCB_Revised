@@ -42,6 +42,8 @@ class simulateOnlineData():
 		self.W = self.initializeW(epsilon)
 		self.GW = self.initializeGW(Gepsilon)
 		self.NoiseScale = NoiseScale
+		
+		
 	def constructAdjMatrix(self):
 		n = len(self.users)	
 
@@ -50,8 +52,8 @@ class simulateOnlineData():
 			sSim = 0
 			for uj in self.users:
 				sim = np.dot(ui.theta, uj.theta)
- 				if ui.id == uj.id:
- 					sim *= 1.0
+				if ui.id == uj.id:
+					sim *= 1.0
 				G[ui.id][uj.id] = sim
 				sSim += sim
 				
@@ -66,17 +68,16 @@ class simulateOnlineData():
 
 	# create user connectivity graph
 	def initializeW(self, epsilon):	
- 		W = self.constructAdjMatrix()
- 		print 'W.T', W.T
+		W = self.constructAdjMatrix()
+		print 'W.T', W.T
 		return W.T
 
 	def initializeGW(self, Gepsilon):
-
- 		G = self.constructAdjMatrix()	
- 		L = csgraph.laplacian(G, normed = False)
- 		I = np.identity(n = G.shape[0])
- 		GW = I + Gepsilon*L  # W is a double stochastic matrix
- 		print 'GW', GW
+		G = self.constructAdjMatrix()	
+		L = csgraph.laplacian(G, normed = False)
+		I = np.identity(n = G.shape[0])
+		GW = I + Gepsilon*L  # W is a double stochastic matrix
+		print 'GW', GW
 		return GW.T
 
 	def getW(self):
@@ -124,15 +125,13 @@ class simulateOnlineData():
 		return np.linalg.norm(x-y) # L2 norm
 
 	def runAlgorithms(self, algorithms):
-		# get cotheta for each user
 		self.startTime = datetime.datetime.now()
 		timeRun = datetime.datetime.now().strftime('_%m_%d_%H_%M') 
-		#fileSig = ''
 		filenameWriteRegret = os.path.join(save_address, 'AccRegret' + timeRun + '.csv')
 		filenameWritePara = os.path.join(save_address, 'ParameterEstimation' + timeRun + '.csv')
 
 
-		self.CoTheta()
+		self.CoTheta() # compute co-theta in each user
 		self.startTime = datetime.datetime.now()
 
 		tim_ = []
@@ -149,15 +148,7 @@ class simulateOnlineData():
 		# Initialization
 		for alg_name in algorithms.iterkeys():
 			BatchAverageRegret[alg_name] = []
-			
-			CoThetaDiffList[alg_name] = []
 			AccRegret[alg_name] = {}
-			if alg_name == 'syncCoLinUCB' or alg_name == 'AsyncCoLinUCB' or alg_name =='WCoLinUCB' or alg_name =='WknowTheta' or alg_name =='W_W0':
-				ThetaDiffList[alg_name] = []
-			if alg_name =='WCoLinUCB' or alg_name =='WknowTheta' or alg_name =='W_W0':
-				WDiffList[alg_name] = []
-
-
 			for i in range(len(self.users)):
 				AccRegret[alg_name][i] = []
 		
@@ -180,10 +171,10 @@ class simulateOnlineData():
 			# prepare to record theta estimation error
 			for alg_name in algorithms.iterkeys():
 				CoThetaDiffList_user[alg_name] = []
-				if alg_name == 'syncCoLinUCB' or alg_name == 'AsyncCoLinUCB' or alg_name == 'WCoLinUCB' or alg_name =='WknowTheta' or alg_name =='W_W0':
-					ThetaDiffList_user[alg_name] = []
-				if alg_name =='WCoLinUCB' or alg_name =='WknowTheta' or alg_name =='W_W0':
-					WDiffList_user[alg_name] = []
+				if alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'WCoLinUCB', 'WknowTheta', 'W_W0']:
+					ThetaDiffList[alg_name] = []
+				if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
+					WDiffList[alg_name] = []
 				
 			for u in self.users:
 				self.regulateArticlePool() # select random articles
@@ -202,13 +193,14 @@ class simulateOnlineData():
 
 					# every algorithm will estimate co-theta
 					
-					if  alg_name == 'syncCoLinUCB' or alg_name == 'AsyncCoLinUCB' or alg_name == 'WCoLinUCB' or alg_name =='WknowTheta' or alg_name =='W_W0':
+					if  alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'WCoLinUCB', 'WknowTheta', 'W_W0']:
 						CoThetaDiffList_user[alg_name] += [self.getL2Diff(u.CoTheta, alg.getCoThetaFromCoLinUCB(u.id))]
 						ThetaDiffList_user[alg_name] += [self.getL2Diff(u.theta, alg.getLearntParameters(u.id))]
-						if alg_name =='WCoLinUCB' or alg_name =='WknowTheta' or alg_name =='W_W0':
+						if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
 							WDiffList_user[alg_name] +=  [self.getL2Diff(self.W.T[u.id], alg.getW(u.id))]	
-					elif alg_name == 'LinUCB'  or alg_name == 'GOBLin':
+					elif alg_name in ['LinUCB', 'GOBLin']:
 						CoThetaDiffList_user[alg_name] += [self.getL2Diff(u.CoTheta, alg.getLearntParameters(u.id))]
+			
 			for alg_name, alg in algorithms.items():
 				if alg_name == 'syncCoLinUCB':
 					alg.LateUpdate()						
