@@ -38,7 +38,7 @@ class simulateOnlineData(object):
 		self.dimension = dimension
 		self.iterations = iterations
 		self.noise = noise
-		self.matrixNoise = matrixNoise
+		self.matrixNoise = matrixNoise # noise to be added to W
 		self.articles = articles 
 		self.users = users
 
@@ -46,9 +46,7 @@ class simulateOnlineData(object):
 		self.batchSize = batchSize
 		
 		self.W = self.initializeW(epsilon)
-		self.W0 = self.initializeW0()
 		self.GW = self.initializeGW(Gepsilon)
-		self.GW0 = self.initializeGW0(Gepsilon)
 		self.NoiseScale = NoiseScale
 		
 	def constructAdjMatrix(self):
@@ -58,7 +56,9 @@ class simulateOnlineData(object):
 		for ui in self.users:
 			sSim = 0
 			for uj in self.users:
-				sim = np.dot(ui.theta, uj.theta) # is dot product sufficient
+				sim = np.dot(ui.theta, uj.theta) + self.matrixNoise() # is dot product sufficient
+				if sim < 0:
+					sim = 0
 				G[ui.id][uj.id] = sim
 				sSim += sim
 				
@@ -72,7 +72,9 @@ class simulateOnlineData(object):
 		for ui in self.users:
 			# construct the original connections
 			for uj in self.users:
-				sim = np.dot(ui.theta, uj.theta)
+				sim = np.dot(ui.theta, uj.theta) + self.matrixNoise() # is dot product sufficient
+				if sim < 0:
+					sim = 0
 				G[ui.id][uj.id] = sim
 			
 			# find out the top M similar users
@@ -95,14 +97,6 @@ class simulateOnlineData(object):
 		print 'W.T', W.T
 		return W.T
 
-	def initializeW0(self):	
-		temp = self.W + abs(self.matrixNoise())
-		W0 = temp
-		for i in range(self.W.shape[0]):
-			W0.T[i] = [float(j)/sum(temp.T[i]) for j in temp.T[i]]
-		print 'W0.T', W0.T
-		return W0
-
 	def initializeGW(self, Gepsilon):
 		G = self.constructAdjMatrix()	
 		L = csgraph.laplacian(G, normed = False)
@@ -111,22 +105,11 @@ class simulateOnlineData(object):
 		print 'GW', GW
 		return GW.T
 
-	def initializeGW0(self, Gepsilon):
-		G0 = self.W0	
-		L = csgraph.laplacian(G0, normed = False)
-		I = np.identity(n = G0.shape[0])
-		GW0 = I + Gepsilon*L  # W is a double stochastic matrix
-		print 'GW0', GW0
-		return GW0
-
 	def getW(self):
 		return self.W
+	
 	def getGW(self):
 		return self.GW
-	def getW0(self):
-		return self.W0
-	def getGW0(self):
-		return self.GW0
 
 	def getTheta(self):
 		Theta = np.zeros(shape = (self.dimension, len(self.users)))
@@ -140,7 +123,6 @@ class simulateOnlineData(object):
 	def regulateArticlePool(self):
 		# Randomly generate articles
 		self.articlePool = sample(self.articles, self.poolArticleSize)   
-		# generate articles 
 
 	def CoTheta(self):
 		for ui in self.users:
@@ -153,7 +135,7 @@ class simulateOnlineData(object):
 		return np.dot(user.CoTheta, pickedArticle.featureVector)
 
 	def GetOptimalReward(self, user, articlePool):		
-		maxReward = sys.float_info.min
+		maxReward = float('-inf')
 		for x in articlePool:	 
 			reward = self.getReward(user, x)
 			if reward > maxReward:
@@ -164,16 +146,13 @@ class simulateOnlineData(object):
 		return np.linalg.norm(x-y) # L2 norm
 
 	def runAlgorithms(self, algorithms):
-		# get cotheta for each user
 		self.startTime = datetime.datetime.now()
 		timeRun = datetime.datetime.now().strftime('_%m_%d_%H_%M') 
-		#fileSig = ''
 		filenameWriteRegret = os.path.join(save_address, 'AccRegret' + timeRun + '.csv')
 		filenameWritePara = os.path.join(save_address, 'ParameterEstimation' + timeRun + '.csv')
 
-
+		# compute co-theta for every user
 		self.CoTheta()
-		self.startTime = datetime.datetime.now()
 
 		tim_ = []
 		BatchAverageRegret = {}
@@ -192,11 +171,10 @@ class simulateOnlineData(object):
 			
 			CoThetaDiffList[alg_name] = []
 			AccRegret[alg_name] = {}
-			if alg_name == 'syncCoLinUCB' or alg_name == 'AsyncCoLinUCB' or alg_name =='WCoLinUCB' or alg_name =='WknowTheta' or alg_name =='W_W0':
+			if alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'WCoLinUCB', 'WknowTheta', 'W_W0']:
 				ThetaDiffList[alg_name] = []
-			if alg_name =='WCoLinUCB' or alg_name =='WknowTheta' or alg_name =='W_W0':
+			if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
 				WDiffList[alg_name] = []
-
 
 			for i in range(len(self.users)):
 				AccRegret[alg_name][i] = []
