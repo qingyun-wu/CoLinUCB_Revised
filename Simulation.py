@@ -9,13 +9,6 @@ from conf import sim_files_folder, result_folder, save_address
 from util_functions import *
 from Articles import *
 from Users import *
-<<<<<<< HEAD
-#from Algori import *
-#from Algori import *
-=======
-#from Algori import *     # Import LinUCB, Asy.CoLin, Syn.CoLin, GOB.Lin algorithms and some basic structures for all the alogrithms
-#from Algori_SelectUser import *  # import selectUser algorithm: LinUCB_RandomUser, CoLin_RandomUser, LinUCB_SelectUser, CoLin_SelectUser
->>>>>>> ab8b202e614c83f78042872cd2040bcf3c36ff1c
 
 from LinUCB import *
 from CoLin import *
@@ -337,8 +330,7 @@ class simulateOnlineData(object):
 		axa[2].set_yscale('log')
 		axa[2].set_title("Parameter estimation error")
 		'''
-<<<<<<< HEAD
-=======
+
 		plt.show()
 
 
@@ -556,7 +548,6 @@ class simulateOnlineData_SelectUser(simulateOnlineData):
 		axa[1].set_ylabel("L2 Diff")
 		axa[1].set_yscale('log')
 		axa[1].set_title("Parameter estimation error")
->>>>>>> ab8b202e614c83f78042872cd2040bcf3c36ff1c
 		plt.show()
 
 
@@ -635,16 +626,9 @@ if __name__ == '__main__':
 	algorithms = {}
 	
 	#algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
-	
-<<<<<<< HEAD
 	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW0() )
 	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
 	#algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
-=======
-	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
-	#algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
-	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
->>>>>>> ab8b202e614c83f78042872cd2040bcf3c36ff1c
 	
 	#algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
 	#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
