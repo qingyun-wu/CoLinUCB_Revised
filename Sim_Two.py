@@ -9,13 +9,8 @@ from conf import sim_files_folder, result_folder, save_address
 from util_functions import *
 from Articles import *
 from Users import *
-<<<<<<< HEAD
-#from Algori import *
-#from Algori import *
-=======
 #from Algori import *     # Import LinUCB, Asy.CoLin, Syn.CoLin, GOB.Lin algorithms and some basic structures for all the alogrithms
 #from Algori_SelectUser import *  # import selectUser algorithm: LinUCB_RandomUser, CoLin_RandomUser, LinUCB_SelectUser, CoLin_SelectUser
->>>>>>> ab8b202e614c83f78042872cd2040bcf3c36ff1c
 
 from LinUCB import *
 from CoLin import *
@@ -32,7 +27,6 @@ class simulateOnlineData(object):
 	def __init__(self, dimension, iterations, articles, users, 
 					batchSize = 1000,
 					noise = lambda : 0,
-					matrixNoise = lambda:0,
 					type_ = 'UniformTheta', 
 					signature = '', 
 					poolArticleSize = 10, 
@@ -45,7 +39,6 @@ class simulateOnlineData(object):
 		self.dimension = dimension
 		self.iterations = iterations
 		self.noise = noise
-		self.matrixNoise = matrixNoise
 		self.articles = articles 
 		self.users = users
 
@@ -53,9 +46,7 @@ class simulateOnlineData(object):
 		self.batchSize = batchSize
 		
 		self.W = self.initializeW(epsilon)
-		self.W0 = self.initializeW0()
 		self.GW = self.initializeGW(Gepsilon)
-		self.GW0 = self.initializeGW0(Gepsilon)
 		self.NoiseScale = NoiseScale
 	def constructAdjMatrix(self):
 		n = len(self.users)	
@@ -77,47 +68,13 @@ class simulateOnlineData(object):
 			print ''
 			'''
 		return G
-    
-    # top m users
-	def constructSparseMatrix(self, m):
-		n = len(self.users)	
-
-		G = np.zeros(shape = (n, n))
-		for ui in self.users:
-			sSim = 0
-			for uj in self.users:
-				sim = np.dot(ui.theta, uj.theta)
- 				if ui.id == uj.id:
- 					sim *= 1.0
- 				elif uj.id >=m or ui.id >=m:
- 					sim = 0
-				G[ui.id][uj.id] = sim
-				sSim += sim
-				
-			G[ui.id] /= sSim
-			'''
-			for i in range(n):
-				print '%.3f' % G[ui.id][i],
-			print ''
-			'''
-		return G
-
 		
 
 	# create user connectivity graph
 	def initializeW(self, epsilon):	
  		W = self.constructAdjMatrix()
- 		#W = self.constructSparseMatrix(3)   # sparse matrix top m users 
  		print 'W.T', W.T
 		return W.T
-
-	def initializeW0(self):	
- 		temp = self.W+abs(self.matrixNoise())
-		W0 = temp
-		for i in range(self.W.shape[0]):
-			W0.T[i] = [float(j)/sum(temp.T[i]) for j in temp.T[i]]
-		print 'W0.T', W0.T
-		return W0
 
 	def initializeGW(self, Gepsilon):
 
@@ -128,23 +85,17 @@ class simulateOnlineData(object):
  		print 'GW', GW
 		return GW.T
 
-	def initializeGW0(self, Gepsilon):
- 		G0 = self.W0	
- 		L = csgraph.laplacian(G0, normed = False)
- 		I = np.identity(n = G0.shape[0])
- 		GW0 = I + Gepsilon*L  # W is a double stochastic matrix
- 		print 'GW0', GW0
-		return GW0
-
 	def getW(self):
 		return self.W
 	def getGW(self):
 		return self.GW
 	def getW0(self):
-		return self.W0
-	def getGW0(self):
-		return self.GW0
-
+		temp = self.W+abs(self.noise())
+		W0 = temp
+		for i in range(self.W.shape[0]):
+			W0.T[i] = [float(j)/sum(temp.T[i]) for j in temp.T[i]]
+		print 'W0.T', W0.T
+		return W0
 	def getTheta(self):
 		Theta = np.zeros(shape = (self.dimension, len(self.users)))
 		for i in range(len(self.users)):
@@ -337,8 +288,6 @@ class simulateOnlineData(object):
 		axa[2].set_yscale('log')
 		axa[2].set_title("Parameter estimation error")
 		'''
-<<<<<<< HEAD
-=======
 		plt.show()
 
 
@@ -556,14 +505,12 @@ class simulateOnlineData_SelectUser(simulateOnlineData):
 		axa[1].set_ylabel("L2 Diff")
 		axa[1].set_yscale('log')
 		axa[1].set_title("Parameter estimation error")
->>>>>>> ab8b202e614c83f78042872cd2040bcf3c36ff1c
 		plt.show()
 
 
 if __name__ == '__main__':
-	iterations = 500
+	iterations = 300
 	NoiseScale = .1
-	matrixNoise = .3
 
 	dimension = 5
 	alpha  = 0.2
@@ -610,7 +557,6 @@ if __name__ == '__main__':
 						articles=articles,
 						users = users,		
 						noise = lambda : np.random.normal(scale = NoiseScale),
-						matrixNoise = lambda : np.random.normal(scale = matrixNoise),
 						batchSize = batchSize,
 						type_ = "UniformTheta", 
 						signature = AM.signature,
@@ -634,21 +580,15 @@ if __name__ == '__main__':
 
 	algorithms = {}
 	
-	#algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
+	algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
 	
-<<<<<<< HEAD
-	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW0() )
-	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
-	#algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
-=======
-	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
+	#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
 	#algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
->>>>>>> ab8b202e614c83f78042872cd2040bcf3c36ff1c
 	
 	#algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
 	#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
-	#algorithms['W_W0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
+	algorithms['W_W0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
 
 	#algorithms['eGreedy'] = eGreedyAlgorithm(epsilon = eGreedy)
 	#algorithms['UCB1'] = UCB1Algorithm()
@@ -660,7 +600,7 @@ if __name__ == '__main__':
 	#selectUser_Algorithms['AsyncCoLin_RandomUser'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	
 	simExperiment.runAlgorithms(algorithms)
-	simExperiment_SelectUser.runAlgorithms(selectUser_Algorithms)
+	#simExperiment_SelectUser.runAlgorithms(selectUser_Algorithms)
 
 
 
