@@ -67,7 +67,6 @@ class LinUCB_SelectUserAlgorithm(LinUCBAlgorithm):
 		articlePicked = None
 		userPicked = None
 		
-		AllUsers = list(np.random.permutation(AllUsers)) # why do we need this permutation?
 		for x in pool_articles:
 			for user in AllUsers:
 				x_pta = self.users[user.id].getProb(self.alpha, self.users, x)
