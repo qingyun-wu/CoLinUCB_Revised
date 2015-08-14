@@ -10,6 +10,8 @@ class CoLinUCBUserSharedStruct(object):
 		self.CCA = np.identity(n = featureDimension*userNum) # inverse of A, a dN by dN matrix
 		self.b = np.zeros(featureDimension*userNum)
 
+		self.AInv = np.linalg.inv(self.A)
+
 		self.UserTheta = np.zeros(shape = (featureDimension, userNum))
 		self.CoTheta = np.zeros(shape = (featureDimension, userNum))
 
@@ -35,9 +37,11 @@ class AsyCoLinUCBUserSharedStruct(CoLinUCBUserSharedStruct):
 		self.A += np.outer(X, X)	
 		self.b += click*X
 
-		self.UserTheta = matrixize(np.dot(np.linalg.inv(self.A), self.b), len(articlePicked.featureVector)) 
+		self.AInv = np.linalg.inv(self.A)
+
+		self.UserTheta = matrixize(np.dot(self.AInv, self.b), len(articlePicked.featureVector)) 
 		self.CoTheta = np.dot(self.UserTheta, self.W)
-		self.CCA = np.dot(np.dot(self.BigW, np.linalg.inv(self.A)), np.transpose(self.BigW))
+		self.CCA = np.dot(np.dot(self.BigW, self.AInv), np.transpose(self.BigW))
 		
 
 class SyCoLinUCBUserSharedStruct(CoLinUCBUserSharedStruct):
@@ -61,10 +65,11 @@ class SyCoLinUCBUserSharedStruct(CoLinUCBUserSharedStruct):
 			current_b += self.reward[i] * X
 		self.A += current_A
 		self.b += current_b
+		self.AInv = np.linalg.inv(self.A)
 
-		self.UserTheta = matrixize(np.dot(np.linalg.inv(self.A), self.b), featureDimension) 
+		self.UserTheta = matrixize(np.dot(self.AInv, self.b), featureDimension) 
 		self.CoTheta = np.dot(self.UserTheta, self.W)
-		self.CCA = np.dot(np.dot(self.BigW , np.linalg.inv(self.A)), np.transpose(self.BigW))
+		self.CCA = np.dot(np.dot(self.BigW , self.AInv), np.transpose(self.BigW))
 
 		
 		
@@ -121,6 +126,7 @@ class syncCoLinUCBAlgorithm(CoLinUCBAlgorithm):
 class CoLinUCB_SelectUserAlgorithm(AsyCoLinUCBAlgorithm):
 	def __init__(self, dimension, alpha, lambda_, n, W):  # n is number of users
 		CoLinUCBAlgorithm.__init__(self, dimension, alpha, lambda_, n, W)
+		self.USERS = AsyCoLinUCBUserSharedStruct(dimension, lambda_, n, W) 
 
 	def decide(self, pool_articles, AllUsers):
 		maxPTA = float('-inf')

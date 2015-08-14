@@ -7,7 +7,7 @@ from Users import UserManager
 from Articles import ArticleManager
 from Simulation import simulateOnlineData
 from util_functions import featureUniform
-from datetime import datetime
+import datetime
 from conf import save_address, sim_files_folder
 from os import path
 from random import choice
@@ -91,9 +91,9 @@ class simulateOnlineData_SelectUser(simulateOnlineData):
             
             RandomUser = choice(self.users)            
             for alg_name, alg in algorithms.items():
-                if alg_name in ['LinUCB_SelectUser', 'AsyncCoLin_SelectUser']:
+                if 'SelectUser' in alg_name:
                     pickedUser, pickedArticle = alg.decide(self.articlePool, self.users)
-                elif alg_name in ['LinUCB_RandomUser', 'AsyncCoLin_RandomUser']:
+                elif 'RandomUser' in alg_name:
                     pickedUser = RandomUser
                     pickedArticle = alg.decide(self.articlePool, pickedUser.id)
                     

@@ -1,7 +1,7 @@
 import numpy as np
 from random import sample
 from scipy.sparse import csgraph
-from datetime import datetime 
+import datetime
 import os.path
 import matplotlib.pyplot as plt
 # local address to save simulated users, simulated articles, and results
@@ -177,7 +177,9 @@ class simulateOnlineData(object):
 				CoThetaDiffList[alg_name] = []		
 			if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
 				WDiffList[alg_name] = []
-		
+			if alg_name in ['LinUCB','GOBLin']:
+				CoThetaDiffList[alg_name] = []
+		'''
 		with open(filenameWriteRegret, 'w') as f:
 			f.write('Time(Iteration)')
 			f.write(',' + ','.join( [str(alg_name) for alg_name in algorithms.iterkeys()]))
@@ -188,6 +190,7 @@ class simulateOnlineData(object):
 			f.write(','+ ','.join([str(alg_name)+'Theta' for alg_name in ThetaDiffList.iterkeys()]))
 			f.write(','+ ','.join([str(alg_name)+'W' for alg_name in WDiffList.iterkeys()]))
 			f.write('\n')
+		'''
 		
 		# Loop begin
 		for iter_ in range(self.iterations):
@@ -198,6 +201,8 @@ class simulateOnlineData(object):
 					CoThetaDiff[alg_name] = 0
 				if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
 					WDiff[alg_name] = 0
+				if alg_name in ['LinUCB','GOBLin']:
+					CoThetaDiff[alg_name] = 0
 					
 			for u in self.users:
 				self.regulateArticlePool() # select random articles
@@ -239,7 +244,7 @@ class simulateOnlineData(object):
 				tim_.append(iter_)
 				for alg_name in algorithms.iterkeys():
 					BatchCumlateRegret[alg_name].append(sum(AlgRegret[alg_name]))
-				
+				'''
 				with open(filenameWriteRegret, 'a+') as f:
 					f.write(str(iter_))
 					f.write(',' + ','.join([str(BatchCumlateRegret[alg_name][-1]) for alg_name in algorithms.iterkeys()]))
@@ -250,6 +255,7 @@ class simulateOnlineData(object):
 					f.write(','+ ','.join([str(ThetaDiffList[alg_name][-1]) for alg_name in ThetaDiffList.iterkeys()]))
 					f.write(','+ ','.join([str(ThetaDiffList[alg_name][-1]) for alg_name in WDiffList.iterkeys()]))
 					f.write('\n')
+				'''
 					
 		# plot the results		
 		f, axa = plt.subplots(2, sharex=True)
@@ -336,9 +342,9 @@ if __name__ == '__main__':
 	algorithms = {}
 	
 	algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
-	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW0() )
-	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
-	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
+	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
+	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	
 	#algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
 	#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
