@@ -53,9 +53,10 @@ class simulateOnlineData(object):
 				G[ui.id][uj.id] = np.dot(ui.theta, uj.theta) # is dot product sufficient
 		return G
 		
-	def constructAdjMatrix(self, G, m):
+	def constructAdjMatrix(self, m):
 		n = len(self.users)	
 
+		G = self.constructGraph()
 		W = np.zeros(shape = (n, n))
 		W0 = np.zeros(shape = (n, n)) # corrupt version of W
 		for ui in self.users:
@@ -81,21 +82,7 @@ class simulateOnlineData(object):
 			W0[ui.id] /= sum(W0[ui.id])
 		return [W, W0]
 
-	# create user connectivity graph
-	def initializeW(self, epsilon):	
-		if self.sparseLevel > 0:
-			W = self.constructSparseMatrix(self.sparseLevel)   # sparse matrix top m users 
-		else:
-			W = self.constructAdjMatrix()
-		print 'W.T', W.T
-		return W.T
-
-	def initializeGW(self, Gepsilon):
-		if self.sparseLevel > 0:
-			G = self.constructSparseMatrix(self.sparseLevel)
-		else:
-			G = self.constructAdjMatrix()	
-			
+	def constructLaplacianMatrix(self, G):			
 		L = csgraph.laplacian(G, normed = False)
 		I = np.identity(n = G.shape[0])
 		GW = I + Gepsilon*L  # W is a double stochastic matrix
