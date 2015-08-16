@@ -32,6 +32,8 @@ class simulateOnlineData(object):
 		self.iterations = iterations
 		self.noise = noise
 		self.matrixNoise = matrixNoise # noise to be added to W
+		self.NoiseScale = NoiseScale
+		
 		self.articles = articles 
 		self.users = users
 		self.sparseLevel = sparseLevel
@@ -41,49 +43,43 @@ class simulateOnlineData(object):
 		
 		self.W = self.initializeW(epsilon)
 		self.GW = self.initializeGW(Gepsilon)
-		self.NoiseScale = NoiseScale
 		
-	def constructAdjMatrix(self):
+	def constructGraph(self):
 		n = len(self.users)	
 
 		G = np.zeros(shape = (n, n))
 		for ui in self.users:
-			sSim = 0
 			for uj in self.users:
-				sim = np.dot(ui.theta, uj.theta) + self.matrixNoise() # is dot product sufficient
+				G[ui.id][uj.id] = np.dot(ui.theta, uj.theta) # is dot product sufficient
+		return G
+		
+	def constructAdjMatrix(self, G, m):
+		n = len(self.users)	
+
+		W = np.zeros(shape = (n, n))
+		W0 = np.zeros(shape = (n, n)) # corrupt version of W
+		for ui in self.users:
+			for uj in self.users:
+				W[ui.id][uj.id] = G[ui.id][uj.id]
+				sim = W[ui.id][uj.id] + self.matrixNoise() # corrupt W with noise
 				if sim < 0:
 					sim = 0
-				G[ui.id][uj.id] = sim
-				sSim += sim
+				W0[ui.id][uj.id] = sim
 				
-			G[ui.id] /= sSim
-		return G
-
-	def constructSparseMatrix(self, m):
-		n = len(self.users)	
-		m = min(n, m); # in case m is set too large
-
-		G = np.zeros(shape = (n, n))
-		for ui in self.users:
-			# construct the original connections
-			for uj in self.users:
-				sim = np.dot(ui.theta, uj.theta) + self.matrixNoise() # is dot product sufficient
-				if sim < 0:
-					sim = 0
-				G[ui.id][uj.id] = sim
-			
-			# find out the top M similar users
-			similarity = sorted(G[ui.id], reverse=True)
-			threshold = similarity[m]
-			simSum = sum(similarity[0:m])
-			
-			# trim and renormalize the graph
-			for i in range(n):
-				if G[ui.id][i] > threshold:
-					G[ui.id][i] /= simSum
-				else:
-					G[ui.id][i] = 0;
-		return G
+			# find out the top M similar users in G
+			if m>0 and m<n:
+				similarity = sorted(G[ui.id], reverse=True)
+				threshold = similarity[m]				
+				
+				# trim the graph
+				for i in range(n):
+					if G[ui.id][i] <= threshold:
+						W[ui.id][i] = 0;
+						W0[ui.id][i] = 0;
+					
+			W[ui.id] /= sum(W[ui.id])
+			W0[ui.id] /= sum(W0[ui.id])
+		return [W, W0]
 
 	# create user connectivity graph
 	def initializeW(self, epsilon):	
