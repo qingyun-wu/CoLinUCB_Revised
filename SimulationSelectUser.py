@@ -241,7 +241,7 @@ if __name__ == '__main__':
     selectUser_Algorithms['LinUCB_SelectUser'] = LinUCB_SelectUserAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)    
     selectUser_Algorithms['AsyncCoLin_SelectUser'] = CoLinUCB_SelectUserAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
     
-    selectUser_Algorithms['GOBUCB_SelectUser'] = GOBLin_SelectUserAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getGW())
+    #selectUser_Algorithms['GOBUCB_SelectUser'] = GOBLin_SelectUserAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getGW())
     selectUser_Algorithms['AsyncCoLin_RandomUser'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
     
     simExperiment_SelectUser.runAlgorithms(selectUser_Algorithms)

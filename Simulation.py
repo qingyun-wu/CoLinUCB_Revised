@@ -41,8 +41,10 @@ class simulateOnlineData(object):
 		self.poolArticleSize = poolArticleSize
 		self.batchSize = batchSize
 		
-		self.W = self.initializeW(epsilon)
-		self.GW = self.initializeGW(Gepsilon)
+		#self.W = self.initializeW(epsilon)
+		#self.GW = self.initializeGW(Gepsilon)
+		self.W, self.W0 = self.constructAdjMatrix(5)
+		self.GW = self.constructLaplacianMatrix(self.W, Gepsilon)
 		
 	def constructGraph(self):
 		n = len(self.users)	
@@ -82,7 +84,7 @@ class simulateOnlineData(object):
 			W0[ui.id] /= sum(W0[ui.id])
 		return [W, W0]
 
-	def constructLaplacianMatrix(self, G):			
+	def constructLaplacianMatrix(self, G, Gepsilon):			
 		L = csgraph.laplacian(G, normed = False)
 		I = np.identity(n = G.shape[0])
 		GW = I + Gepsilon*L  # W is a double stochastic matrix
