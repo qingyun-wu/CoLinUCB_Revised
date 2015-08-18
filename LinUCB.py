@@ -3,15 +3,17 @@ import numpy as np
 class LinUCBUserStruct:
 	def __init__(self, featureDimension, userID, lambda_):
 		self.userID = userID
-		self.A = lambda_*np.identity(n = featureDimension)
-		self.b = np.zeros(featureDimension)
-		self.UserTheta = np.zeros(featureDimension)
+		self.d = featureDimension
+		self.A = lambda_*np.identity(n = self.d)
+		self.b = np.zeros(self.d)
+		self.AInv = np.linalg.inv(self.A)
+		self.UserTheta = np.zeros(self.d)
 
-	def updateParameters(self, articlePicked, click):
-		featureVector = articlePicked.featureVector
-		self.A += np.outer(featureVector, featureVector)
-		self.b += featureVector*click
-		self.UserTheta = np.dot(np.linalg.inv(self.A), self.b)
+	def updateParameters(self, articlePicked_FeatureVector, click):
+		self.A += np.outer(articlePicked_FeatureVector,articlePicked_FeatureVector)
+		self.b += articlePicked_FeatureVector*click
+		self.AInv = np.linalg.inv(self.A)
+		self.UserTheta = np.dot(self.AInv, self.b)
 		
 	def getTheta(self):
 		return self.UserTheta
@@ -19,10 +21,9 @@ class LinUCBUserStruct:
 	def getA(self):
 		return self.A
 
-	def getProb(self, alpha, users, article):
-		featureVector = article.featureVector
-		mean = np.dot(self.getTheta(), featureVector)
-		var = np.sqrt(np.dot(np.dot(featureVector, np.linalg.inv(self.getA())), featureVector))
+	def getProb(self, alpha, article_FeatureVector):
+		mean = np.dot(self.UserTheta,  article_FeatureVector)
+		var = np.sqrt(np.dot(np.dot(article_FeatureVector, self.AInv),  article_FeatureVector))
 		pta = mean + alpha * var
 		return pta
 
@@ -42,7 +43,7 @@ class LinUCBAlgorithm:
 		articlePicked = None
 
 		for x in pool_articles:
-			x_pta = self.users[userID].getProb(self.alpha, self.users, x)
+			x_pta = self.users[userID].getProb(self.alpha, x.featureVector)
 			# pick article with highest Prob
 			if maxPTA < x_pta:
 				articlePicked = x
@@ -51,7 +52,7 @@ class LinUCBAlgorithm:
 		return articlePicked
 
 	def updateParameters(self, articlePicked, click, userID):
-		self.users[userID].updateParameters(articlePicked, click)
+		self.users[userID].updateParameters(articlePicked.featureVector, click)
 		
 	def getLearntParameters(self, userID):
 		return self.users[userID].UserTheta
@@ -69,7 +70,7 @@ class LinUCB_SelectUserAlgorithm(LinUCBAlgorithm):
 		
 		for x in pool_articles:
 			for user in AllUsers:
-				x_pta = self.users[user.id].getProb(self.alpha, self.users, x)
+				x_pta = self.users[user.id].getProb(self.alpha, self.users, x.featureVector)
 				# pick article with highest Prob
 				if maxPTA < x_pta:
 					articlePicked = x

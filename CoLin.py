@@ -6,6 +6,7 @@ class CoLinUCBUserSharedStruct(object):
 	def __init__(self, featureDimension, lambda_, userNum, W):
 		self.W = W
 		self.userNum = userNum
+		self.d = featureDimension
 		self.A = lambda_*np.identity(n = featureDimension*userNum) # accumulated feature matrix, a dN by dN matrix
 		self.CCA = np.identity(n = featureDimension*userNum) # inverse of A, a dN by dN matrix
 		self.b = np.zeros(featureDimension*userNum)
@@ -20,38 +21,37 @@ class CoLinUCBUserSharedStruct(object):
 	def updateParameters(self, articlePicked, click,  userID):
 		pass
 	
-	def getProb(self, alpha, article, userID):
-		TempFeatureM = np.zeros(shape =(len(article.featureVector), self.userNum))
-		TempFeatureM.T[userID] = article.featureVector
-		TempFeatureV = vectorize(TempFeatureM)
+	def getProb(self, alpha, articleFeatureVector, userID):
+		TempFeatureV = np.zeros(len(articleFeatureVector)*self.userNum)
+		TempFeatureV[float(userID)*self.d:(float(userID)+1)*self.d] = np.asarray(articleFeatureVector)
 
-		mean = np.dot(self.CoTheta.T[userID], article.featureVector)
+		mean = np.dot(self.CoTheta.T[userID], articleFeatureVector)
 		var = np.sqrt(np.dot(np.dot(TempFeatureV, self.CCA), TempFeatureV))
 		pta = mean + alpha * var
 		return pta
 
 
 class AsyCoLinUCBUserSharedStruct(CoLinUCBUserSharedStruct):	
-	def updateParameters(self, articlePicked, click,  userID):	
-		X = vectorize(np.outer(articlePicked.featureVector, self.W.T[userID])) 
+	def updateParameters(self, articlePicked_FeatureVector, click,  userID):	
+		X = vectorize(np.outer(articlePicked_FeatureVector, self.W.T[userID])) 
 		self.A += np.outer(X, X)	
 		self.b += click*X
 
 		self.AInv = np.linalg.inv(self.A)
 
-		self.UserTheta = matrixize(np.dot(self.AInv, self.b), len(articlePicked.featureVector)) 
+		self.UserTheta = matrixize(np.dot(self.AInv, self.b), len(articlePicked_FeatureVector)) 
 		self.CoTheta = np.dot(self.UserTheta, self.W)
 		self.CCA = np.dot(np.dot(self.BigW, self.AInv), np.transpose(self.BigW))
 		
 
 class SyCoLinUCBUserSharedStruct(CoLinUCBUserSharedStruct):
 	def __init__(self, featureDimension, lambda_, userNum, W):
-		CoLinUCBUserSharedStruct.__init__(self, featureDimension, lambda_, userNum, W)
+		CoLinUCBUserSharedStruct.__init__(self, featureDimension = featureDimension, lambda_ = lambda_, userNum = userNum, W= W)
 		self.featureVectorMatrix = np.zeros(shape =(featureDimension, userNum))
 		self.reward = np.zeros(userNum)
 		
-	def updateParameters(self, articlePicked, click, userID):	
-		self.featureVectorMatrix.T[userID] = articlePicked.featureVector
+	def updateParameters(self, articlePicked_FeatureVector, click, userID):	
+		self.featureVectorMatrix.T[userID] = articlePicked_FeatureVector
 		self.reward[userID] = click
 		
 	def LateUpdate(self):
@@ -86,7 +86,7 @@ class CoLinUCBAlgorithm:
 		articlePicked = None
 
 		for x in pool_articles:
-			x_pta = self.USERS.getProb(self.alpha, x, userID)
+			x_pta = self.USERS.getProb(self.alpha, x.featureVector, userID)
 			# pick article with highest Prob
 			if maxPTA < x_pta:
 				articlePicked = x
@@ -95,7 +95,7 @@ class CoLinUCBAlgorithm:
 		return articlePicked
 	
 	def updateParameters(self, articlePicked, click, userID):
-		self.USERS.updateParameters(articlePicked, click, userID)
+		self.USERS.updateParameters(articlePicked.featureVector, click, userID)
 		
 	def getLearntParameters(self, userID):
 		return self.USERS.UserTheta.T[userID]
@@ -109,13 +109,13 @@ class CoLinUCBAlgorithm:
 
 class AsyCoLinUCBAlgorithm(CoLinUCBAlgorithm):
 	def __init__(self, dimension, alpha, lambda_, n, W):
-		CoLinUCBAlgorithm.__init__(self, dimension, alpha, lambda_, n, W)
+		CoLinUCBAlgorithm.__init__(self, dimension = dimension, alpha = alpha, lambda_ = alpha, n = n, W = W)
 		self.USERS = AsyCoLinUCBUserSharedStruct(dimension, lambda_, n, W)
 		
 		
 class syncCoLinUCBAlgorithm(CoLinUCBAlgorithm):
 	def __init__(self, dimension, alpha, lambda_, n, W):
-		CoLinUCBAlgorithm.__init__(self, dimension, alpha, lambda_, n, W)
+		CoLinUCBAlgorithm.__init__(self, dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n, W = W)
 		self.USERS = SyCoLinUCBUserSharedStruct(dimension, lambda_, n, W)
 
 	def LateUpdate(self):
@@ -125,7 +125,7 @@ class syncCoLinUCBAlgorithm(CoLinUCBAlgorithm):
 #-----------CoLinUCB select user algorithm(only has asynchorize version)-----
 class CoLinUCB_SelectUserAlgorithm(AsyCoLinUCBAlgorithm):
 	def __init__(self, dimension, alpha, lambda_, n, W):  # n is number of users
-		CoLinUCBAlgorithm.__init__(self, dimension, alpha, lambda_, n, W)
+		CoLinUCBAlgorithm.__init__(self, dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n, W= W)
 		self.USERS = AsyCoLinUCBUserSharedStruct(dimension, lambda_, n, W) 
 
 	def decide(self, pool_articles, AllUsers):
@@ -135,7 +135,7 @@ class CoLinUCB_SelectUserAlgorithm(AsyCoLinUCBAlgorithm):
 
 		for x in pool_articles:
 			for user in AllUsers:
-				x_pta = self.USERS.getProb(self.alpha, x, user.id)
+				x_pta = self.USERS.getProb(self.alpha, x.featureVector, user.id)
 				# pick article with highest Prob
 				if maxPTA < x_pta:
 					articlePicked = x

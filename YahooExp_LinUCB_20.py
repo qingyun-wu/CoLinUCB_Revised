@@ -7,30 +7,12 @@ import datetime
 import numpy as np 	
 from scipy.sparse import csgraph
 from scipy.spatial import distance
-from util_functions import getClusters, getIDAssignment, parseLine, save_to_file
-
+from YahooExp_util_functions import getClusters, getIDAssignment, parseLine, save_to_file, articleAccess
+from LinUCB import LinUCBUserStruct
 
 # time conventions in file name
 # dataDay + Month + Day + Hour + Minute
 
-
-# data structure to store ctr	
-class articleAccess():
-	def __init__(self):
-		self.accesses = 0.0 # times the article was chosen to be presented as the best articles
-		self.clicks = 0.0 	# of times the article was actually clicked by the user
-		self.CTR = 0.0 		# ctr as calculated by the updateCTR function
-
-	def updateCTR(self):
-		try:
-			self.CTR = self.clicks / self.accesses
-		except ZeroDivisionError: # if it has not been accessed
-			self.CTR = -1
-		return self.CTR
-
-	def addrecord(self, click):
-		self.clicks += click
-		self.accesses += 1
 
 # structure to save data from random strategy as mentioned in LiHongs paper
 class randomStruct:
@@ -38,26 +20,10 @@ class randomStruct:
 		self.learn_stats = articleAccess()
 
 # structure to save data from LinUCB strategy
-class LinUCBStruct:
-	def __init__(self, lambda_,  d, userID):
-		self.d = d
-		self.userID = userID
-		self.A = lambda_*np.identity(n = d)
-		self.b = np.zeros(d)
-		self.theta = np.zeros(d)
-
+class LinUCBStruct(LinUCBUserStruct):
+	def __init__(self, featureDimension, userID, lambda_):
+		LinUCBUserStruct.__init__(self, featureDimension= featureDimension, userID = userID, lambda_ = lambda_)
 		self.learn_stats = articleAccess()
-
-	def updateParameters(self, PickedfeatureVector, reward):
-		self.A += np.outer(PickedfeatureVector, PickedfeatureVector)
-		self.b += reward*PickedfeatureVector
-		self.theta = np.dot(np.linalg.inv(self.A), self.b)
-
-	def getLinUCBPta(self, alpha, featureVector, theta, A):
-		mean = np.dot(theta, featureVector)
-		var = np.sqrt(np.dot( np.dot(featureVector, np.linalg.inv(A)) , featureVector))
-		pta = mean + alpha*var
-		return pta
 
 
 if __name__ == '__main__':
@@ -105,11 +71,11 @@ if __name__ == '__main__':
 	LinUCB_users = []
 	
 	for i in range(userNum):
-		LinUCB_users.append(LinUCBStruct(lambda_, d, i ))
+		LinUCB_users.append(LinUCBStruct(d, i, lambda_ ))
 
 	for dataDay in dataDays:
 		fileName = yahoo_address + "/ydata-fp-td-clicks-v1_0.200905" + dataDay	
-		fileNameWrite = os.path.join(save_address, fileSig + dataDay + timeRun + '.csv')
+		fileNameWrite = os.path.join(Yahoo_save_address, fileSig + dataDay + timeRun + '.csv')
 
 		# put some new data in file for readability
 		with open(fileNameWrite, 'a+') as f:
@@ -140,15 +106,14 @@ if __name__ == '__main__':
                                         currentArticles.append(article_id)
                                         # CoLinUCB pick article
                                         if len(article_featureVector)==5:
-                                                LinUCB_pta = LinUCB_users[currentUserID].getLinUCBPta(alpha, article_featureVector, LinUCB_users[currentUserID].theta, LinUCB_users[currentUserID].A)
+                                                LinUCB_pta = LinUCB_users[currentUserID].getProb(alpha, article_featureVector)
                                                 if LinUCB_maxPTA < LinUCB_pta:
                                                         LinUCBPicked = article_id    # article picked by CoLinU
                                                         LinUCB_PickedfeatureVector = article_featureVector
                                                         LinUCB_maxPTA = LinUCB_pta
 
                               
-                        	articles_random.learn_stats.addrecord(click)
-                                
+                        	articles_random.learn_stats.addrecord(click) 
                                 if LinUCBPicked == article_chosen:
                                         LinUCB_users[currentUserID].learn_stats.addrecord(click)
                                         LinUCB_users[currentUserID].updateParameters(LinUCB_PickedfeatureVector, click)

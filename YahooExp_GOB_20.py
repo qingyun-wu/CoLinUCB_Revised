@@ -8,78 +8,23 @@ import numpy as np 	# many operations are done in numpy as matrix inverse; for e
 from scipy.sparse import csgraph 
 from scipy.spatial import distance
 from scipy.linalg import sqrtm
-from util_functions import getClusters, getIDAssignment, parseLine, save_to_file, initializeGW
+from YahooExp_util_functions import getClusters, getIDAssignment, parseLine, save_to_file, initializeGW, articleAccess
+
+from GOBLin import GOBLinSharedStruct
 
 
 # time conventions in file name
 # dataDay + Month + Day + Hour + Minute
-
-
-# data structures for different strategies and parameters
-# data structure to store ctr	
-class articleAccess():
-	def __init__(self):
-		self.accesses = 0.0 # times the article was chosen to be presented as the best articles
-		self.clicks = 0.0 	# of times the article was actually clicked by the user
-		self.CTR = 0.0 		# ctr as calculated by the updateCTR function
-
-	def updateCTR(self):
-		try:
-			self.CTR = self.clicks / self.accesses
-		except ZeroDivisionError: # if it has not been accessed
-			self.CTR = -1
-		return self.CTR
-
-	def addrecord(self, click):
-		self.clicks += click
-		self.accesses += 1
-
 # structure to save data from random strategy as mentioned in LiHongs paper
 class randomStruct:
 	def __init__(self):
 		self.learn_stats = articleAccess()
 		self.deploy_stats = articleAccess()
 
-class GOBLinStruct:
-	def __init__(self, lambda_, d,  Gepsilon, userNum, userFeatureVectors):
+class GOBLinStruct(GOBLinSharedStruct):
+	def __init__(self, featureDimension, lambda_, userNum, W):
+		GOBLinSharedStruct.__init__(self, featureDimension = featureDimension, lambda_ = lambda_, userNum = userNum, W = W)
 		self.learn_stats = articleAccess()	
-
-		self.d = d
-		self.userNum= userNum
-
-		self.W = initializeGW(userFeatureVectors, Gepsilon)
-
-		self.A = lambda_* np.identity(n = d*self.userNum)
-		self.b = np.zeros(d*self.userNum)
-                self.AInv = np.linalg.inv(self.A)
-		
-		self.theta = np.dot(np.linalg.inv(self.A), self.b)   # Long vector
-		self.STBigWInv = sqrtm( np.linalg.inv(np.kron(self.W, np.identity(n=d))) )
-		self.STBigW = sqrtm(np.kron(self.W, np.identity(n=d)))
-	def updateParameters(self, PickedfeatureVector, reward,userID):
-		featureVectorV = np.zeros(self.d*self.userNum)
-		featureVectorV[float(userID)*d:(float(userID)+1)*d] = np.asarray(PickedfeatureVector)
-
-		CoFeaV = np.dot(self.STBigWInv, featureVectorV)
-		self.A += np.outer(CoFeaV, CoFeaV)
-		self.b += click * CoFeaV
-
-                self.AInv = np.linalg.inv(self.A)
-
-		self.theta = np.dot(self.AInv, self.b)
-
-	def getGOBLinPta(self, alpha, featureVector, userID):
-
-		featureVectorV = np.zeros(self.d*self.userNum)
-		featureVectorV[float(userID)*d:(float(userID)+1)*d] = np.asarray(featureVector)
-		
-		CoFeaV = np.dot(self.STBigWInv, featureVectorV)
-
-		mean = np.dot(np.transpose(self.theta), CoFeaV)
-	
-		var = np.sqrt( np.dot( np.dot(CoFeaV, self.AInv) , CoFeaV))
-		pta = mean + alpha * var
-		return pta
 	
 
 # This code simply reads one line from the source files of Yahoo!. Please see the yahoo info file to understand the format. I tested this part; so should be good but second pair of eyes could help
@@ -132,13 +77,14 @@ if __name__ == '__main__':
 	fileNameWriteCluster = os.path.join(data_address, 'kmeans_model_20.dat')
 	userFeatureVectors = getClusters(fileNameWriteCluster)	
 	userNum = len(userFeatureVectors)
+	GW = initializeGW(userFeatureVectors, epsilon)
 	
 	articles_random = randomStruct()
-	GOBLin_USERS = GOBLinStruct(lambda_, d, epsilon, userNum,userFeatureVectors)
+	GOBLin_USERS = GOBLinStruct(d, lambda_, userNum, GW)
 
 	for dataDay in dataDays:
 		fileName = yahoo_address + "/ydata-fp-td-clicks-v1_0.200905" + dataDay	
-		fileNameWrite = os.path.join(save_address, fileSig + dataDay + timeRun + '.csv')
+		fileNameWrite = os.path.join(Yahoo_save_address, fileSig + dataDay + timeRun + '.csv')
 
 		# put some new data in file for readability
 		with open(fileNameWrite, 'a+') as f:
@@ -168,7 +114,7 @@ if __name__ == '__main__':
                                         article_featureVector =np.asarray(article[1:6])
                                         currentArticles.append(article_id)
                                         if len(article_featureVector)==5:
-                                                GOBLin_pta = GOBLin_USERS.getGOBLinPta(alpha, article_featureVector, currentUserID)
+                                                GOBLin_pta = GOBLin_USERS.getProb(alpha, article_featureVector, currentUserID)
                                                 if GOBLin_maxPTA < GOBLin_pta:
                                                         GOBLinPicked = article_id    # article picked by GOB.Lin
                                                         GOBLin_PickedfeatureVector = article_featureVector

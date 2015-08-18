@@ -11,6 +11,8 @@ result_folder = "./SimulationResults"
 
 save_address = "./SimulationResults"
 
+Yahoo_save_address = "./YahooResults"
+
 save_addressResult = "./Results/Sparse"
 
 
@@ -18,4 +20,4 @@ datasets_address = '/if24/qw2ky/MyResearch/datasets/'  # should be modified acco
 
 yahoo_address = os.path.join(datasets_address, "R6")
 
-data_address = './data'
+data_address = './KMeansModel'

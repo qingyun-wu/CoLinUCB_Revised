@@ -91,6 +91,7 @@ def initializeGW(FeatureVectors, Gepsilon):
 # generate graph W according to similarity
 def initializeW(userFeatureVectors):
         n = len(userFeatureVectors)
+    
         W = np.zeros(shape = (n, n))
         
         for i in range(n):
@@ -104,6 +105,26 @@ def initializeW(userFeatureVectors):
                 for a in range(n):
                     print '%.3f' % W[i][a],
                 print ''
+    
+        #W = np.identity(n)
         return W.T
+
+# data structure to store ctr   
+class articleAccess():
+    def __init__(self):
+        self.accesses = 0.0 # times the article was chosen to be presented as the best articles
+        self.clicks = 0.0   # of times the article was actually clicked by the user
+        self.CTR = 0.0      # ctr as calculated by the updateCTR function
+
+    def updateCTR(self):
+        try:
+            self.CTR = self.clicks / self.accesses
+        except ZeroDivisionError: # if it has not been accessed
+            self.CTR = -1
+        return self.CTR
+
+    def addrecord(self, click):
+        self.clicks += click
+        self.accesses += 1
 
 
