@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 #from sklearn.preprocessing import normalize
 from scipy.optimize import minimize
 import math
-from SPG import *
 from util_functions import vectorize, matrixize
 
 def vectorize(M):
@@ -63,25 +62,8 @@ class WknowThetaStruct:
 				{'type' : 'ineq',
 				'fun' : lambda x: 1-x},
 				{'type': 'eq',
-			     'fun' : lambda x : sum(x[0 * self.userNum: 1*self.userNum]) - 1 },
-			     {'type': 'eq',
-			     'fun' : lambda x : sum(x[1 * self.userNum: 2*self.userNum]) - 1 },
-			     {'type': 'eq',
-			     'fun' : lambda x : sum(x[2 * self.userNum: 3 *self.userNum]) - 1 },
-			     {'type': 'eq',
-			     'fun' : lambda x : sum(x[3 * self.userNum: 4*self.userNum]) - 1 },
-			     {'type': 'eq',
-			     'fun' : lambda x : sum(x[4 * self.userNum: 5*self.userNum]) - 1 },
-			     {'type': 'eq',
-			     'fun' : lambda x : sum(x[5 * self.userNum: 6*self.userNum]) - 1 },
-			     {'type': 'eq',
-			     'fun' : lambda x : sum(x[6 * self.userNum: 7*self.userNum]) - 1 },
-			     {'type': 'eq',
-			     'fun' : lambda x : sum(x[7 * self.userNum: 8*self.userNum]) - 1 },
-			     {'type': 'eq',
-			     'fun' : lambda x : sum(x[8 * self.userNum: 9*self.userNum]) - 1 },
-			     {'type': 'eq',
-			     'fun' : lambda x : sum(x[9 * self.userNum: 10*self.userNum]) - 1 }
+				 'fun': lambda x : np.sum(np.square(np.sum(x, axis = 1)-1)) # I'm not sure whether to sum in row or column, but this should do the work.
+				}
 				)
 		'''
 		res = minimize(fun, self.W, constraints = cons, method ='SLSQP', jac = fprime, options={'disp': False})
@@ -194,7 +176,7 @@ class WAlgorithm:
 		self.alpha = alpha
 
 		self.CanEstimateUserPreference = True
-		self.CanEstimateCoUserPreference = True 
+		self.CanEstimateCoUserPreference =  True
 		self.CanEstimateW = True
 
 	def decide(self, pool_articles, userID):
@@ -231,8 +213,8 @@ class WknowThetaAlgorithm(WAlgorithm):
 		self.CanEstimateUserPreference = False
 		self.CanEstimateCoUserPreference = False
 		self.CanEstimateW = True
-		
-	def getLearntParameters(self, userID):
-		return self.USERS.theta.T[userID]
+	def getW(self, userID):
+		#print self.USERS.W
+		return self.USERS.W.T[userID]
 
 
