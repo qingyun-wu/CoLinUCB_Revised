@@ -9,7 +9,7 @@ from conf import sim_files_folder, save_address
 from util_functions import featureUniform
 from Articles import ArticleManager
 from Users import UserManager
-from LinUCB import LinUCBAlgorithm
+from LinUCB import N_LinUCBAlgorithm, Uniform_LinUCBAlgorithm
 from GOBLin import GOBLinAlgorithm
 from CoLin import AsyCoLinUCBAlgorithm, syncCoLinUCBAlgorithm
 
@@ -82,10 +82,19 @@ class simulateOnlineData(object):
 					
 			W[ui.id] /= sum(W[ui.id])
 			W0[ui.id] /= sum(W0[ui.id])
+
 		return [W, W0]
 
-	def constructLaplacianMatrix(self, G, Gepsilon):			
+	def constructLaplacianMatrix(self, G, Gepsilon):
+		print G
+		#Convert adjacency matrix of weighted graph to adjacency matrix of unweighted graph
+		for i in self.users:
+			for j in self.users:
+				if G[i.id][j.id] > 0:
+					G[i.id][j.id] = 1	
+
 		L = csgraph.laplacian(G, normed = False)
+		print L
 		I = np.identity(n = G.shape[0])
 		GW = I + Gepsilon*L  # W is a double stochastic matrix
 		print 'GW', GW
@@ -93,6 +102,8 @@ class simulateOnlineData(object):
 
 	def getW(self):
 		return self.W
+	def getFullW(self):
+		return self.FullW
 	
 	def getGW(self):
 		return self.GW
@@ -157,12 +168,12 @@ class simulateOnlineData(object):
 			AlgRegret[alg_name] = []
 			BatchCumlateRegret[alg_name] = []
 			
-			if alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'WCoLinUCB', 'WknowTheta', 'W_W0']:
+			if alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'AsyncCoLinUCB_Full','WCoLinUCB', 'WknowTheta', 'W_W0']:
 				ThetaDiffList[alg_name] = []
 				CoThetaDiffList[alg_name] = []		
 			if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
 				WDiffList[alg_name] = []
-			if alg_name in ['LinUCB','GOBLin']:
+			if alg_name in ['LinUCB','GOBLin','UniformLinUCB']:
 				CoThetaDiffList[alg_name] = []
 		'''
 		with open(filenameWriteRegret, 'w') as f:
@@ -181,12 +192,12 @@ class simulateOnlineData(object):
 		for iter_ in range(self.iterations):
 			# prepare to record theta estimation error
 			for alg_name in algorithms.iterkeys():
-				if alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'WCoLinUCB', 'WknowTheta', 'W_W0']:
+				if alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'AsyncCoLinUCB_Full','WCoLinUCB', 'WknowTheta', 'W_W0']:
 					ThetaDiff[alg_name] = 0
 					CoThetaDiff[alg_name] = 0
 				if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
 					WDiff[alg_name] = 0
-				if alg_name in ['LinUCB','GOBLin']:
+				if alg_name in ['LinUCB','GOBLin','UniformLinUCB']:
 					CoThetaDiff[alg_name] = 0
 					
 			for u in self.users:
@@ -205,12 +216,12 @@ class simulateOnlineData(object):
 					AlgRegret[alg_name].append(regret)
 
 					# every algorithm will estimate co-theta					
-					if  alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'WCoLinUCB', 'WknowTheta', 'W_W0']:
+					if  alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'AsyncCoLinUCB_Full', 'WCoLinUCB', 'WknowTheta', 'W_W0']:
 						CoThetaDiff[alg_name] += self.getL2Diff(u.CoTheta, alg.getCoThetaFromCoLinUCB(u.id))
 						ThetaDiff[alg_name] += self.getL2Diff(u.theta, alg.getLearntParameters(u.id))
 						if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
 							WDiff[alg_name] += self.getL2Diff(self.W.T[u.id], alg.getW(u.id))	
-					elif alg_name in ['LinUCB', 'GOBLin']:
+					elif alg_name in ['LinUCB', 'GOBLin','UniformLinUCB']:
 						CoThetaDiff[alg_name] += self.getL2Diff(u.CoTheta, alg.getLearntParameters(u.id))
 			
 			if 'syncCoLinUCB' in algorithms:
@@ -218,7 +229,7 @@ class simulateOnlineData(object):
 
 			for alg_name in algorithms.iterkeys():
 				CoThetaDiffList[alg_name] += [CoThetaDiff[alg_name]/userSize]
-				if alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB']:
+				if alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB','AsyncCoLinUCB_Full']:
 					ThetaDiffList[alg_name] += [ThetaDiff[alg_name]/userSize]
 				if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
 					ThetaDiffList[alg_name] += [ThetaDiff[alg_name]/userSize]
@@ -257,7 +268,7 @@ class simulateOnlineData(object):
 		
 		for alg_name in algorithms.iterkeys():
 			axa[1].plot(time, CoThetaDiffList[alg_name], label = alg_name + '_CoTheta')
-			if alg_name == 'AsyncCoLinUCB' or alg_name =='syncCoLinUCB' or alg_name =='WCoLinUCB' or alg_name =='W_W0':
+			if alg_name == 'AsyncCoLinUCB' or alg_name =='syncCoLinUCB' or alg_name== 'AsyncCoLinUCB_Full' or alg_name =='WCoLinUCB' or alg_name =='W_W0':
 				axa[1].plot(time, ThetaDiffList[alg_name], label = alg_name + '_Theta')
 		
 		axa[1].legend(loc='upper right',prop={'size':6})
@@ -268,9 +279,9 @@ class simulateOnlineData(object):
 		plt.show()
 
 if __name__ == '__main__':
-	iterations = 500
+	iterations = 300
 	NoiseScale = .1
-	matrixNoise = .3
+	matrixNoise = .1
 
 	dimension = 5
 	alpha  = 0.2
@@ -281,8 +292,8 @@ if __name__ == '__main__':
 	n_articles = 1000
 	ArticleGroups = 5
 
-	n_users = 10
-	UserGroups = 5	
+	n_users = 1
+	UserGroups = 1	
 
 	poolSize = 10
 	batchSize = 10
@@ -326,10 +337,11 @@ if __name__ == '__main__':
 
 	algorithms = {}
 	
-	algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
+	algorithms['LinUCB'] = N_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
 	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
 	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+	algorithms['UniformLinUCB'] = Uniform_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_)
 	
 	#algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
 	#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())

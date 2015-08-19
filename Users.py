@@ -46,37 +46,11 @@ class UserManager():
 		mask = self.generateMasks()
 
 		for i in range(self.UserGroups):
-			usersids[i] = range(self.userNum*i/5, (self.userNum*(i+1))/5)
+			usersids[i] = range(self.userNum*i/self.UserGroups, (self.userNum*(i+1))/self.UserGroups)
 
 			for key in usersids[i]:
 				thetaVector = np.multiply(self.thetaFunc(self.dimension, argv = self.argv), mask[i])
 				l2_norm = np.linalg.norm(thetaVector, ord =2)
 				users.append(User(key, thetaVector/l2_norm))
-		'''
-		usersids_1 = range(numUsers/5)
-		usersids_2 = range(numUsers/5, numUsers*2/5)
-		usersids_3 = range(numUsers*2/5, numUsers*3/5)
-		usersids_4 = range(numUsers*3/5, numUsers*4/5)
-		usersids_5 = range(numUsers*4/5, numUsers*5/5)
-
-		mask1 = [0,1,1,1,1]
-		mask2 = [1,0,1,1,1]
-		mask3 = [1,1,0,1,1]
-		mask4 =[1,1,1,0,1]
-		mask5 = [1,1,1,1,0]
-		users = []
-
-		for key in usersids_1:
-			users.append(User(key, np.multiply(thetaFunc(self.dimension, argv = argv), mask1)))
-		for key in usersids_2:
-			users.append(User(key, np.multiply(thetaFunc(self.dimension, argv = argv), mask2)))
-		for key in usersids_3:
-			users.append(User(key, np.multiply(thetaFunc(self.dimension, argv = argv), mask3)))
-		for key in usersids_4:
-			users.append(User(key, np.multiply(thetaFunc(self.dimension, argv = argv), mask4)))
-		for key in usersids_5:
-			users.append(User(key, np.multiply(thetaFunc(self.dimension, argv = argv), mask5)))
-		'''
-		
 		return users
 

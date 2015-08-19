@@ -1,8 +1,7 @@
 import numpy as np
 
 class LinUCBUserStruct:
-	def __init__(self, featureDimension, userID, lambda_):
-		self.userID = userID
+	def __init__(self, featureDimension, lambda_):
 		self.d = featureDimension
 		self.A = lambda_*np.identity(n = self.d)
 		self.b = np.zeros(self.d)
@@ -27,13 +26,36 @@ class LinUCBUserStruct:
 		pta = mean + alpha * var
 		return pta
 
+
+class Uniform_LinUCBAlgorithm(object):
+	def __init__(self, dimension, alpha, lambda_):
+		self.dimension = dimension
+		self.alpha = alpha
+		self.USER = LinUCBUserStruct(dimension, lambda_)
+	def decide(self, pool_articles, userID):
+		maxPTA = float('-inf')
+		articlePicked = None
+
+		for x in pool_articles:
+			x_pta = self.USER.getProb(self.alpha, x.featureVector)
+			if maxPTA < x_pta:
+				articlePicked = x
+				maxPTA = x_pta
+		return articlePicked
+	def updateParameters(self, articlePicked, click, userID):
+		self.USER.updateParameters(articlePicked.featureVector, click)
+	def getLearntParameters(self, userID):
+		return self.USER.UserTheta
+
+
+
 #---------------LinUCB(fixed user order) algorithm---------------
-class LinUCBAlgorithm:
+class N_LinUCBAlgorithm:
 	def __init__(self, dimension, alpha, lambda_, n):  # n is number of users
 		self.users = []
 		#algorithm have n users, each user has a user structure
 		for i in range(n):
-			self.users.append(LinUCBUserStruct(dimension, i, lambda_ )) 
+			self.users.append(LinUCBUserStruct(dimension, lambda_ )) 
 
 		self.dimension = dimension
 		self.alpha = alpha
@@ -59,7 +81,7 @@ class LinUCBAlgorithm:
 
 
 #-----------LinUCB select user algorithm-----------
-class LinUCB_SelectUserAlgorithm(LinUCBAlgorithm):
+class LinUCB_SelectUserAlgorithm(N_LinUCBAlgorithm):
 	def __init__(self, dimension, alpha, lambda_, n):  # n is number of users
 		LinUCBAlgorithm.__init__(self, dimension, alpha, lambda_, n)
 

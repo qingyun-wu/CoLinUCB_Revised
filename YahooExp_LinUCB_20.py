@@ -21,8 +21,8 @@ class randomStruct:
 
 # structure to save data from LinUCB strategy
 class LinUCBStruct(LinUCBUserStruct):
-	def __init__(self, featureDimension, userID, lambda_):
-		LinUCBUserStruct.__init__(self, featureDimension= featureDimension, userID = userID, lambda_ = lambda_)
+	def __init__(self, featureDimension, lambda_):
+		LinUCBUserStruct.__init__(self, featureDimension= featureDimension, lambda_ = lambda_)
 		self.learn_stats = articleAccess()
 
 
@@ -71,7 +71,7 @@ if __name__ == '__main__':
 	LinUCB_users = []
 	
 	for i in range(userNum):
-		LinUCB_users.append(LinUCBStruct(d, i, lambda_ ))
+		LinUCB_users.append(LinUCBStruct(d, lambda_ ))
 
 	for dataDay in dataDays:
 		fileName = yahoo_address + "/ydata-fp-td-clicks-v1_0.200905" + dataDay	
