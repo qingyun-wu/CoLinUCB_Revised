@@ -164,17 +164,15 @@ class simulateOnlineData(object):
 		
 		# Initialization
 		userSize = len(self.users)
-		for alg_name in algorithms.iterkeys():
+		for alg_name, alg in algorithms.items():
 			AlgRegret[alg_name] = []
 			BatchCumlateRegret[alg_name] = []
-			
-			if alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'AsyncCoLinUCB_Full','WCoLinUCB', 'WknowTheta', 'W_W0']:
+			if alg.CanEstimateUserPreference:
 				ThetaDiffList[alg_name] = []
-				CoThetaDiffList[alg_name] = []		
-			if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
-				WDiffList[alg_name] = []
-			if alg_name in ['LinUCB','GOBLin','UniformLinUCB']:
+			if alg.CanEstimateCoUserPreference:
 				CoThetaDiffList[alg_name] = []
+			if alg.CanEstimateW:
+				WDiffList[alg_name] = []
 		'''
 		with open(filenameWriteRegret, 'w') as f:
 			f.write('Time(Iteration)')
@@ -191,14 +189,13 @@ class simulateOnlineData(object):
 		# Loop begin
 		for iter_ in range(self.iterations):
 			# prepare to record theta estimation error
-			for alg_name in algorithms.iterkeys():
-				if alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'AsyncCoLinUCB_Full','WCoLinUCB', 'WknowTheta', 'W_W0']:
+			for alg_name, alg in algorithms.items():
+				if alg.CanEstimateUserPreference:
 					ThetaDiff[alg_name] = 0
+				if alg.CanEstimateCoUserPreference:
 					CoThetaDiff[alg_name] = 0
-				if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
+				if alg.CanEstimateW:
 					WDiff[alg_name] = 0
-				if alg_name in ['LinUCB','GOBLin','UniformLinUCB']:
-					CoThetaDiff[alg_name] = 0
 					
 			for u in self.users:
 				self.regulateArticlePool() # select random articles
@@ -215,25 +212,24 @@ class simulateOnlineData(object):
 					regret = OptimalReward - reward	
 					AlgRegret[alg_name].append(regret)
 
-					# every algorithm will estimate co-theta					
-					if  alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB', 'AsyncCoLinUCB_Full', 'WCoLinUCB', 'WknowTheta', 'W_W0']:
-						CoThetaDiff[alg_name] += self.getL2Diff(u.CoTheta, alg.getCoThetaFromCoLinUCB(u.id))
-						ThetaDiff[alg_name] += self.getL2Diff(u.theta, alg.getLearntParameters(u.id))
-						if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
-							WDiff[alg_name] += self.getL2Diff(self.W.T[u.id], alg.getW(u.id))	
-					elif alg_name in ['LinUCB', 'GOBLin','UniformLinUCB']:
-						CoThetaDiff[alg_name] += self.getL2Diff(u.CoTheta, alg.getLearntParameters(u.id))
+					#update parameter estimation record
+					if alg.CanEstimateUserPreference:
+						ThetaDiff[alg_name] += self.getL2Diff(u.theta, alg.getTheta(u.id))
+					if alg.CanEstimateCoUserPreference:
+						CoThetaDiff[alg_name] += self.getL2Diff(u.CoTheta, alg.getCoTheta(u.id))
+					if alg.CanEstimateW:
+						WDiff[alg_name] += self.getL2Diff(self.W.T[u.id], alg.getW(u.id))	
 			
 			if 'syncCoLinUCB' in algorithms:
-				algorithms['syncCoLinUCB'].LateUpdate()						
+				algorithms['syncCoLinUCB'].LateUpdate()	
 
-			for alg_name in algorithms.iterkeys():
-				CoThetaDiffList[alg_name] += [CoThetaDiff[alg_name]/userSize]
-				if alg_name in ['syncCoLinUCB', 'AsyncCoLinUCB','AsyncCoLinUCB_Full']:
+			for alg_name, alg in algorithms.items():
+				if alg.CanEstimateUserPreference:
 					ThetaDiffList[alg_name] += [ThetaDiff[alg_name]/userSize]
-				if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
-					ThetaDiffList[alg_name] += [ThetaDiff[alg_name]/userSize]
-					WDiffList[alg_name] += [WDiff[alg_name]/userSize]
+				if alg.CanEstimateCoUserPreference:
+					CoThetaDiffList[alg_name] += [CoThetaDiff[alg_name]/userSize]
+				if alg.CanEstimateW:
+					WDiffList[alg_name] += [WDiff[alg_name]/userSize]	
 				
 			if iter_%self.batchSize == 0:
 				self.batchRecord(iter_)
@@ -265,11 +261,11 @@ class simulateOnlineData(object):
 		
 		# plot the estimation error of co-theta
 		time = range(self.iterations)
-		
-		for alg_name in algorithms.iterkeys():
-			axa[1].plot(time, CoThetaDiffList[alg_name], label = alg_name + '_CoTheta')
-			if alg_name == 'AsyncCoLinUCB' or alg_name =='syncCoLinUCB' or alg_name== 'AsyncCoLinUCB_Full' or alg_name =='WCoLinUCB' or alg_name =='W_W0':
+		for alg_name, alg in algorithms.items():
+			if alg.CanEstimateUserPreference:
 				axa[1].plot(time, ThetaDiffList[alg_name], label = alg_name + '_Theta')
+			if alg.CanEstimateCoUserPreference:
+				axa[1].plot(time, CoThetaDiffList[alg_name], label = alg_name + '_CoTheta')
 		
 		axa[1].legend(loc='upper right',prop={'size':6})
 		axa[1].set_xlabel("Iteration")
@@ -341,6 +337,7 @@ if __name__ == '__main__':
 	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
 	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+	
 	algorithms['UniformLinUCB'] = Uniform_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_)
 	
 	#algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)

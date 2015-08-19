@@ -95,6 +95,10 @@ class W_W0_Algorithm:
 		self.dimension = dimension
 		self.alpha = alpha
 
+		self.CanEstimateUserPreference = True
+		self.CanEstimateCoUserPreference = True 
+		self.CanEstimateW = True
+
 	def decide(self, pool_articles, userID):
 		maxPTA = float('-inf')
 		articlePicked = None
@@ -110,10 +114,10 @@ class W_W0_Algorithm:
 	def updateParameters(self, articlePicked, click, userID):
 		self.USERS.updateParameters(articlePicked, click, userID)
 		
-	def getLearntParameters(self, userID):
+	def getTheta(self, userID):
 		return self.USERS.UserTheta.T[userID]
 
-	def getCoThetaFromCoLinUCB(self, userID):
+	def getCoTheta(self, userID):
 		return self.USERS.CoTheta.T[userID]
 	def getW(self, userID):
 		#print self.USERS.W

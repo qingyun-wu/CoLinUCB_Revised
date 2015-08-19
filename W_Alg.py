@@ -193,6 +193,10 @@ class WAlgorithm:
 		self.dimension = dimension
 		self.alpha = alpha
 
+		self.CanEstimateUserPreference = True
+		self.CanEstimateCoUserPreference = True 
+		self.CanEstimateW = True
+
 	def decide(self, pool_articles, userID):
 		maxPTA = float('-inf')
 		articlePicked = None
@@ -208,10 +212,10 @@ class WAlgorithm:
 	def updateParameters(self, articlePicked, click, userID):
 		self.USERS.updateParameters(articlePicked, click, userID)
 		
-	def getLearntParameters(self, userID):
+	def getTheta(self, userID):
 		return self.USERS.UserTheta.T[userID]
 
-	def getCoThetaFromCoLinUCB(self, userID):
+	def getCoTheta(self, userID):
 		return self.USERS.CoTheta.T[userID]
 	def getW(self, userID):
 		#print self.USERS.W
@@ -224,6 +228,9 @@ class WknowThetaAlgorithm(WAlgorithm):
 	def __init__(self, dimension, alpha, lambda_, eta_, n, theta):
 		WAlgorithm.__init__(self, dimension, alpha, lambda_, eta_, n)
 		self.USERS = WknowThetaStruct(dimension, eta_, n, theta)
+		self.CanEstimateUserPreference = False
+		self.CanEstimateCoUserPreference = False
+		self.CanEstimateW = True
 		
 	def getLearntParameters(self, userID):
 		return self.USERS.theta.T[userID]

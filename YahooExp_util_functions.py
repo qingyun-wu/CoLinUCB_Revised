@@ -91,7 +91,6 @@ def initializeGW(FeatureVectors, Gepsilon):
 # generate graph W according to similarity
 def initializeW(userFeatureVectors):
         n = len(userFeatureVectors)
-    
         W = np.zeros(shape = (n, n))
         
         for i in range(n):

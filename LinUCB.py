@@ -32,6 +32,10 @@ class Uniform_LinUCBAlgorithm(object):
 		self.dimension = dimension
 		self.alpha = alpha
 		self.USER = LinUCBUserStruct(dimension, lambda_)
+
+		self.CanEstimateUserPreference = False
+		self.CanEstimateCoUserPreference = True 
+		self.CanEstimateW = False
 	def decide(self, pool_articles, userID):
 		maxPTA = float('-inf')
 		articlePicked = None
@@ -44,7 +48,7 @@ class Uniform_LinUCBAlgorithm(object):
 		return articlePicked
 	def updateParameters(self, articlePicked, click, userID):
 		self.USER.updateParameters(articlePicked.featureVector, click)
-	def getLearntParameters(self, userID):
+	def getCoTheta(self, userID):
 		return self.USER.UserTheta
 
 
@@ -60,6 +64,9 @@ class N_LinUCBAlgorithm:
 		self.dimension = dimension
 		self.alpha = alpha
 
+		self.CanEstimateUserPreference = False
+		self.CanEstimateCoUserPreference = True 
+		self.CanEstimateW = False
 	def decide(self, pool_articles, userID):
 		maxPTA = float('-inf')
 		articlePicked = None
@@ -76,7 +83,7 @@ class N_LinUCBAlgorithm:
 	def updateParameters(self, articlePicked, click, userID):
 		self.users[userID].updateParameters(articlePicked.featureVector, click)
 		
-	def getLearntParameters(self, userID):
+	def getCoTheta(self, userID):
 		return self.users[userID].UserTheta
 
 

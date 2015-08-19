@@ -81,6 +81,10 @@ class CoLinUCBAlgorithm:
 		self.alpha = alpha
 		self.W = W
 
+		self.CanEstimateUserPreference = True
+		self.CanEstimateCoUserPreference = True 
+		self.CanEstimateW = False
+
 	def decide(self, pool_articles, userID):
 		maxPTA = float('-inf')
 		articlePicked = None
@@ -97,10 +101,10 @@ class CoLinUCBAlgorithm:
 	def updateParameters(self, articlePicked, click, userID):
 		self.USERS.updateParameters(articlePicked.featureVector, click, userID)
 		
-	def getLearntParameters(self, userID):
+	def getTheta(self, userID):
 		return self.USERS.UserTheta.T[userID]
 
-	def getCoThetaFromCoLinUCB(self, userID):
+	def getCoTheta(self, userID):
 		return self.USERS.CoTheta.T[userID]
 
 	def getA(self):
