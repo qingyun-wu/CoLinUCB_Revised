@@ -43,7 +43,7 @@ class simulateOnlineData(object):
 		
 		#self.W = self.initializeW(epsilon)
 		#self.GW = self.initializeGW(Gepsilon)
-		self.W, self.W0 = self.constructAdjMatrix(5)
+		self.W, self.W0 = self.constructAdjMatrix(10)
 		self.GW = self.constructLaplacianMatrix(self.W, Gepsilon)
 		
 	def constructGraph(self):

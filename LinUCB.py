@@ -26,7 +26,6 @@ class LinUCBUserStruct:
 		pta = mean + alpha * var
 		return pta
 
-
 class Uniform_LinUCBAlgorithm(object):
 	def __init__(self, dimension, alpha, lambda_):
 		self.dimension = dimension
@@ -90,7 +89,7 @@ class N_LinUCBAlgorithm:
 #-----------LinUCB select user algorithm-----------
 class LinUCB_SelectUserAlgorithm(N_LinUCBAlgorithm):
 	def __init__(self, dimension, alpha, lambda_, n):  # n is number of users
-		LinUCBAlgorithm.__init__(self, dimension, alpha, lambda_, n)
+		N_LinUCBAlgorithm.__init__(self, dimension, alpha, lambda_, n)
 
 	def decide(self, pool_articles, AllUsers):
 		maxPTA = float('-inf')
@@ -99,7 +98,7 @@ class LinUCB_SelectUserAlgorithm(N_LinUCBAlgorithm):
 		
 		for x in pool_articles:
 			for user in AllUsers:
-				x_pta = self.users[user.id].getProb(self.alpha, self.users, x.featureVector)
+				x_pta = self.users[user.id].getProb(self.alpha, x.featureVector)
 				# pick article with highest Prob
 				if maxPTA < x_pta:
 					articlePicked = x

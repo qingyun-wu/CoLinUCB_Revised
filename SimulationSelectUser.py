@@ -58,9 +58,27 @@ class simulateOnlineData_SelectUser(simulateOnlineData):
         ThetaDiffList_user = {}
         CoThetaDiffList_user = {}
         WDiffList_user = {}
+
+        ThetaDiff = {}
+        CoThetaDiff = {}
+        WDiff = {}
         
         # Initialization
         userSize = len(self.users)
+        '''
+        for alg_name, alg in algorithms.items():
+            BatchAverageRegret[alg_name] = []
+            AccRegret[alg_name] = {}
+            if alg.CanEstimateUserPreference:
+                ThetaDiffList[alg_name] = []
+            if alg.CanEstimateCoUserPreference:
+                CoThetaDiffList[alg_name] = []
+            if alg.CanEstimateW:
+                WDiffList[alg_name] = []
+
+            for i in range(userSize):
+                AccRegret[alg_name][i] = []
+        '''
         for alg_name in algorithms.iterkeys():
             BatchAverageRegret[alg_name] = []
             
@@ -74,16 +92,17 @@ class simulateOnlineData_SelectUser(simulateOnlineData):
             for i in range(userSize):
                 AccRegret[alg_name][i] = []
         
+        
         # Loop begin
         for iter_ in range(self.iterations):
             # prepare to record theta estimation error
-            for alg_name in algorithms.iterkeys():
-                CoThetaDiffList_user[alg_name] = []
-                if alg_name in ['syncCoLin_RandomUser', 'AsyncCoLin_RandomUser', 'AsyncCoLin_SelectUser', 'CoSingle', 'WCoLinUCB', 'WknowTheta', 'W_W0']:
-                    ThetaDiffList_user[alg_name] = []
-                if alg_name in ['WCoLinUCB', 'WknowTheta', 'W_W0']:
-                    WDiffList_user[alg_name] = []
-
+            for alg_name, alg in algorithms.items():
+                if alg.CanEstimateUserPreference:
+                    ThetaDiff[alg_name] = 0
+                if alg.CanEstimateCoUserPreference:
+                    CoThetaDiff[alg_name] = 0
+                if alg.CanEstimateW:
+                    WDiff[alg_name] = 0
             self.regulateArticlePool(iter_) # ranomly generate article pool or regularly generate article pool 
 
             #noise = self.noise()
@@ -112,17 +131,21 @@ class simulateOnlineData_SelectUser(simulateOnlineData):
                 AccRegret[alg_name][pickedUser.id].append(regret)
                 
                 # Record parameter estimation error of all users
-                for u in self.users:        
-                    if  alg_name in ['AsyncCoLin_RandomUser', 'AsyncCoLin_SelectUser']:
-                        CoThetaDiffList_user[alg_name] += [self.getL2Diff(u.CoTheta, alg.getCoThetaFromCoLinUCB(u.id))]
-                        ThetaDiffList_user[alg_name] += [self.getL2Diff(u.theta, alg.getLearntParameters(u.id))]    
-                    elif alg_name in ['LinUCB_RandomUser', 'LinUCB_SelectUser']:
-                        CoThetaDiffList_user[alg_name] += [self.getL2Diff(u.CoTheta, alg.getLearntParameters(u.id))]                    
+                for u in self.users:  
+                    if alg.CanEstimateUserPreference:
+                        ThetaDiff[alg_name] += self.getL2Diff(u.theta, alg.getTheta(u.id))
+                    if alg.CanEstimateCoUserPreference:
+                        CoThetaDiff[alg_name] += self.getL2Diff(u.CoTheta, alg.getCoTheta(u.id))
+                    if alg.CanEstimateW:
+                        WDiff[alg_name] += self.getL2Diff(self.W.T[u.id], alg.getW(u.id))  
 
-            for alg_name in algorithms.iterkeys():
-                CoThetaDiffList[alg_name] += [sum(CoThetaDiffList_user[alg_name])/userSize]
-                if alg_name == 'AsyncCoLin_RandomUser' or alg_name == 'AsyncCoLin_SelectUser':
-                    ThetaDiffList[alg_name] += [sum(ThetaDiffList_user[alg_name])/userSize]
+            for alg_name, alg in algorithms.items():
+                if alg.CanEstimateUserPreference:
+                    ThetaDiffList[alg_name] += [ThetaDiff[alg_name]/userSize]
+                if alg.CanEstimateCoUserPreference:
+                    CoThetaDiffList[alg_name] += [CoThetaDiff[alg_name]/userSize]
+                if alg.CanEstimateW:
+                    WDiffList[alg_name] += [WDiff[alg_name]/userSize]
                 
             if iter_%self.batchSize == 0:
                 self.batchRecord(iter_)
@@ -157,12 +180,19 @@ class simulateOnlineData_SelectUser(simulateOnlineData):
         axa[0].set_title("Accumulated Regret")
         
         # plot the estimation error of co-theta and theta
-        time = range(self.iterations)    
+        time = range(self.iterations) 
+        for alg_name, alg in algorithms.items():
+            if alg.CanEstimateUserPreference:
+                axa[1].plot(time, ThetaDiffList[alg_name], label = alg_name + '_Theta')
+            if alg.CanEstimateCoUserPreference:
+                axa[1].plot(time, CoThetaDiffList[alg_name], label = alg_name + '_CoTheta')
+        '''  
         for alg_name in algorithms.iterkeys():
             axa[1].plot(time, CoThetaDiffList[alg_name], label = alg_name + '_CoTheta')
             # CoLin algorithm can estimate theta
             if alg_name == 'AsyncCoLin_RandomUser' or alg_name == 'AsyncCoLin_SelectUser':
-                axa[1].plot(time, ThetaDiffList[alg_name], label = alg_name + '_Theta')        
+                axa[1].plot(time, ThetaDiffList[alg_name], label = alg_name + '_Theta')
+        '''        
         axa[1].legend(loc='upper right',prop={'size':6})
         axa[1].set_xlabel("Iteration")
         axa[1].set_ylabel("L2 Diff")
@@ -242,6 +272,6 @@ if __name__ == '__main__':
     selectUser_Algorithms['AsyncCoLin_SelectUser'] = CoLinUCB_SelectUserAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
     
     #selectUser_Algorithms['GOBUCB_SelectUser'] = GOBLin_SelectUserAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getGW())
-    selectUser_Algorithms['AsyncCoLin_RandomUser'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+    #selectUser_Algorithms['AsyncCoLin_RandomUser'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
     
     simExperiment_SelectUser.runAlgorithms(selectUser_Algorithms)
