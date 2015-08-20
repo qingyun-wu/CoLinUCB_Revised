@@ -13,9 +13,9 @@ from os import path
 from random import choice
 import matplotlib.pyplot as plt
 import numpy as np
-from GOBLin import GOBLin_SelectUserAlgorithm
+from GOBLin import GOBLinAlgorithm, GOBLin_SelectUserAlgorithm
 from CoLin import AsyCoLinUCBAlgorithm, CoLinUCB_SelectUserAlgorithm
-from LinUCB import LinUCB_SelectUserAlgorithm
+from LinUCB import N_LinUCBAlgorithm, LinUCB_SelectUserAlgorithm
 
 class simulateOnlineData_SelectUser(simulateOnlineData):
     def regulateArticlePool(self, iter_):        
@@ -65,7 +65,7 @@ class simulateOnlineData_SelectUser(simulateOnlineData):
         
         # Initialization
         userSize = len(self.users)
-        '''
+        
         for alg_name, alg in algorithms.items():
             BatchAverageRegret[alg_name] = []
             AccRegret[alg_name] = {}
@@ -91,6 +91,7 @@ class simulateOnlineData_SelectUser(simulateOnlineData):
 
             for i in range(userSize):
                 AccRegret[alg_name][i] = []
+        '''
         
         
         # Loop begin
@@ -119,7 +120,7 @@ class simulateOnlineData_SelectUser(simulateOnlineData):
                 reward = self.getReward(pickedUser, pickedArticle) + noise
 
                 #get optimal reward from chosen user
-                #OptimalReward = self.GetOptimalReward(pickedUser, self.articlePool)  
+                #OptimalReward = self.GetOptimalReward(pickedUser, self.articlePool) + noise
 
                 #get optimal reward from the best user+article combinations  
                 OptimalUser, OptimalArticle, OptimalUserReward = self.GetOptimalUserReward(self.users, self.articlePool) 
@@ -127,7 +128,8 @@ class simulateOnlineData_SelectUser(simulateOnlineData):
 
                 alg.updateParameters(pickedArticle, reward, pickedUser.id)
 
-                regret = OptimalReward - reward    
+                regret = OptimalReward - reward  
+                #print pickedArticle.id, OptimalArticle.id, pickedUser.id, OptimalUser.id  
                 AccRegret[alg_name][pickedUser.id].append(regret)
                 
                 # Record parameter estimation error of all users
@@ -215,7 +217,8 @@ if __name__ == '__main__':
     ArticleGroups = 5
 
     n_users = 10
-    UserGroups = 5    
+    UserGroups = 5 
+    sparseLevel = -1
 
     poolSize = 10
     batchSize = 10
@@ -243,7 +246,8 @@ if __name__ == '__main__':
     #AM.saveArticles(articles, articlesFilename, force=False)
     articles = AM.loadArticles(articlesFilename)
 
-    simExperiment = simulateOnlineData(dimension  = dimension,
+
+    simExperiment_SelectUser = simulateOnlineData_SelectUser(dimension  = dimension,
                         iterations = iterations,
                         articles=articles,
                         users = users,        
@@ -252,26 +256,18 @@ if __name__ == '__main__':
                         batchSize = batchSize,
                         type_ = "UniformTheta", 
                         signature = AM.signature,
-                        poolArticleSize = poolSize, NoiseScale = NoiseScale, epsilon = epsilon, Gepsilon =Gepsilon)
-
-    print "Starting for ", simExperiment.simulation_signature
-
-    simExperiment_SelectUser = simulateOnlineData_SelectUser(dimension  = dimension,
-                        iterations = iterations,
-                        articles=articles,
-                        users = users,        
-                        noise = lambda : np.random.normal(scale = NoiseScale),
-                        batchSize = batchSize,
-                        type_ = "UniformTheta", 
-                        signature = AM.signature,
+                        sparseLevel = sparseLevel,
                         poolArticleSize = poolSize, NoiseScale = NoiseScale, epsilon = epsilon, Gepsilon =Gepsilon)
 
     selectUser_Algorithms= {}
     
     selectUser_Algorithms['LinUCB_SelectUser'] = LinUCB_SelectUserAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)    
-    selectUser_Algorithms['AsyncCoLin_SelectUser'] = CoLinUCB_SelectUserAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+    selectUser_Algorithms['AsyncCoLin_SelectUser'] = CoLinUCB_SelectUserAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment_SelectUser.getW()) 
+    selectUser_Algorithms['GOBLin_SelectUser'] = GOBLin_SelectUserAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment_SelectUser.getGW())
+
+    selectUser_Algorithms['LinUCB_RandomUser'] = N_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
+    #selectUser_Algorithms['AsyncCoLin_RandomUser'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment_SelectUser.getW0())
+    #selectUser_Algorithms['GOBLin_RandomUser'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment_SelectUser.getGW() )
     
-    #selectUser_Algorithms['GOBUCB_SelectUser'] = GOBLin_SelectUserAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getGW())
-    #selectUser_Algorithms['AsyncCoLin_RandomUser'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
     
     simExperiment_SelectUser.runAlgorithms(selectUser_Algorithms)

@@ -12,6 +12,8 @@ from Users import UserManager
 from LinUCB import N_LinUCBAlgorithm, Uniform_LinUCBAlgorithm
 from GOBLin import GOBLinAlgorithm
 from CoLin import AsyCoLinUCBAlgorithm, syncCoLinUCBAlgorithm
+from W_W0Alg import W_W0_Algorithm
+from W_Alg import WAlgorithm, WknowThetaAlgorithm
 
 class simulateOnlineData(object):
 	def __init__(self, dimension, iterations, articles, users, 
@@ -43,7 +45,7 @@ class simulateOnlineData(object):
 		
 		#self.W = self.initializeW(epsilon)
 		#self.GW = self.initializeGW(Gepsilon)
-		self.W, self.W0 = self.constructAdjMatrix(10)
+		self.W, self.W0 = self.constructAdjMatrix(sparseLevel)
 		self.GW = self.constructLaplacianMatrix(self.W, Gepsilon)
 		
 	def constructGraph(self):
@@ -102,6 +104,8 @@ class simulateOnlineData(object):
 
 	def getW(self):
 		return self.W
+	def getW0(self):
+		return self.W0
 	def getFullW(self):
 		return self.FullW
 	
@@ -249,7 +253,10 @@ class simulateOnlineData(object):
 					f.write('\n')
 				'''
 					
-		# plot the results		
+		# plot the results	
+		print len(BatchCumlateRegret['WknowTheta'])
+		print 	BatchCumlateRegret['WknowTheta']
+		print len(tim_)
 		f, axa = plt.subplots(2, sharex=True)
 		for alg_name in algorithms.iterkeys():	
 			axa[0].plot(tim_, BatchCumlateRegret[alg_name],label = alg_name)
@@ -288,11 +295,14 @@ if __name__ == '__main__':
 	n_articles = 1000
 	ArticleGroups = 5
 
-	n_users = 1
+	n_users = 10
 	UserGroups = 1	
+
+	sparseLevel = 5
 
 	poolSize = 10
 	batchSize = 10
+
 
 	# Parameters for GOBLin
 	G_alpha = alpha
@@ -327,21 +337,22 @@ if __name__ == '__main__':
 						batchSize = batchSize,
 						type_ = "UniformTheta", 
 						signature = AM.signature,
+						sparseLevel = sparseLevel,
 						poolArticleSize = poolSize, NoiseScale = NoiseScale, epsilon = epsilon, Gepsilon =Gepsilon)
 
 	print "Starting for ", simExperiment.simulation_signature
 
 	algorithms = {}
 	
-	algorithms['LinUCB'] = N_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
-	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
-	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
-	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+	#algorithms['LinUCB'] = N_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
+	#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
+	#algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+	#algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 	
-	algorithms['UniformLinUCB'] = Uniform_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_)
+	#algorithms['UniformLinUCB'] = Uniform_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_)
 	
-	#algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
-	#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
+	algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+	algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
 	#algorithms['W_W0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
 
 	#algorithms['eGreedy'] = eGreedyAlgorithm(epsilon = eGreedy)

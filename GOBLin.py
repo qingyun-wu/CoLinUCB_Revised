@@ -58,6 +58,9 @@ class GOBLin_SelectUserAlgorithm(CoLinUCB_SelectUserAlgorithm):
 	def __init__(self, dimension, alpha, lambda_, n, W):
 		CoLinUCB_SelectUserAlgorithm.__init__(self, dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n, W = W)
 		self.USERS = GOBLinSharedStruct(dimension, lambda_, n, W)
+		self.CanEstimateUserPreference = False
+		self.CanEstimateCoUserPreference = True 
+		self.CanEstimateW = False
 	
 	def getCoTheta(self, userID):
 		thetaMatrix =  matrixize(self.USERS.theta, self.dimension) 
