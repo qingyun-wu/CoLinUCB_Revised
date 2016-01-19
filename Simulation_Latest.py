@@ -51,7 +51,12 @@ class simulateOnlineData():
 		self.batchSize = batchSize
 		
 		self.W = self.initializeW(sparseLevel,epsilon)
-		self.GW = self.initializeGW(sparseLevel,Gepsilon)
+
+		W = self.W.copy()
+		self.W0 = self.initializeW0(W)
+		self.GW = self.initializeGW(W,Gepsilon)
+		W0 = self.W0.copy()
+		self.GW0 = self.initializeGW(W0,Gepsilon)
 		self.noiseLevel = noiseLevel
 		self.matrixNoiseLevel = matrixNoiseLevel
 
@@ -119,13 +124,16 @@ class simulateOnlineData():
  			W = self.constructSparseMatrix(sparseLevel)   # sparse matrix top m users 
  		print 'W.T', W.T
 		return W.T
+	def initializeW0(self,W):
+		temp = W+abs(self.matrixNoise())
+		W0 = temp
+		for i in range(W.shape[0]):
+			W0.T[i] = [float(j)/sum(temp.T[i]) for j in temp.T[i]]
+		print 'W0.T', W0.T
+		return W0
 
-	def initializeGW(self,sparseLevel, Gepsilon):
+	def initializeGW(self,G, Gepsilon):
 		n = len(self.users)	
-		if sparseLevel >=n or sparseLevel<=0:
- 			G = self.constructAdjMatrix()
- 		else:
- 			G = self.constructSparseMatrix(sparseLevel)   # sparse matrix top m users 
  		L = csgraph.laplacian(G, normed = False)
  		I = np.identity(n = G.shape[0])
  		GW = I + Gepsilon*L  # W is a double stochastic matrix
@@ -136,20 +144,10 @@ class simulateOnlineData():
 		return self.W
 	def getGW(self):
 		return self.GW
-	def getW0(self):
-		temp = self.W+abs(self.matrixNoise())
-		W0 = temp
-		for i in range(self.W.shape[0]):
-			W0.T[i] = [float(j)/sum(temp.T[i]) for j in temp.T[i]]
-		print 'W0.T', W0.T
-		return W0
 	def getGW0(self):
-		temp = self.GW+abs(self.matrixNoise())
-		GW0 = temp
-		for i in range(self.GW.shape[0]):
-			GW0.T[i] = [float(j)/sum(temp.T[i]) for j in temp.T[i]]
-		print 'GW0.T', GW0.T
-		return GW0
+		return self.GW0
+
+
 	def getTheta(self):
 		Theta = np.zeros(shape = (self.dimension, len(self.users)))
 		for i in range(len(self.users)):
