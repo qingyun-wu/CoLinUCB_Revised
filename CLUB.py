@@ -96,7 +96,7 @@ class CLUBAlgorithm(LinUCBAlgorithm):
 		#print 'N_components:',N_components
 		self.clusters = component_list
 		return N_components
-	def getCoTheta(self, userID):
+	def getLearntParameters(self, userID):
 		return self.users[userID].UserTheta
 
 

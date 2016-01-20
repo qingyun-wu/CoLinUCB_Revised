@@ -282,7 +282,7 @@ class simulateOnlineData():
 						ThetaDiffList_user[alg_name] += [self.getL2Diff(u.theta, alg.getLearntParameters(u.id))]
 						if alg_name =='WCoLinUCB' or alg_name =='WknowTheta' or alg_name =='W_W0':
 							WDiffList_user[alg_name] +=  [self.getL2Diff(self.W.T[u.id], alg.getW(u.id))]	
-					elif alg_name == 'LinUCB'  or alg_name == 'GOBLin':
+					elif alg_name == 'LinUCB'  or alg_name == 'GOBLin' or alg_name =='HybridLinUCB' or alg_name =='CLUB':
 						CoThetaDiffList_user[alg_name] += [self.getL2Diff(u.CoTheta, alg.getLearntParameters(u.id))]
 			for alg_name, alg in algorithms.items():
 				if alg_name == 'syncCoLinUCB':

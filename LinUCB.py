@@ -117,7 +117,7 @@ class Hybrid_LinUCBAlgorithm(object):
 		return articlePicked
 	def updateParameters(self, articlePicked, click, userID):
 		self.USER.updateParameters(articlePicked, click, userID)
-	def getCoTheta(self, userID):
+	def getLearntParameters(self, userID):
 		return self.USER.users[userID].UserTheta
 
 
