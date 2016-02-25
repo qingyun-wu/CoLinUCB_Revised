@@ -384,10 +384,11 @@ if __name__ == '__main__':
 	G_lambda_ = lambda_
 	Gepsilon = 1
 	# Epsilon_greedy parameter
+	sparseLevel=0
  
 	eGreedy = 0.3
 	CLUB_alpha_2 = 0.5
-
+	'''
 	parser = argparse.ArgumentParser(description = '')
 	parser.add_argument('--alg', dest='alg', help='Select a specific algorithm, could be CoLin, GOBLin, AsyncCoLin, or SyncCoLin')
 
@@ -404,7 +405,7 @@ if __name__ == '__main__':
 	sparseLevel = int(args.SparsityLevel)
 	NoiseScale = float(args.NoiseScale)
 	matrixNoise = float(args.matrixNoise)
-
+	'''
 	
 	userFilename = os.path.join(sim_files_folder, "users_"+str(n_users)+"+dim-"+str(dimension)+ "Ugroups" + str(UserGroups)+".json")
 	
@@ -436,7 +437,9 @@ if __name__ == '__main__':
 	print "Starting for ", simExperiment.simulation_signature
 	#userFeature = simExperiment.generateUserFeature(simExperiment.getW())
 	#print 'FeatureFunc', userFeature
+	
 	algorithms = {}
+	'''
 	if algName == 'LinUCB':
 		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
 	if algName == 'GOBLin':
@@ -456,7 +459,9 @@ if __name__ == '__main__':
 		algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 		algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
 		algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2)	
-	#algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+	'''
+	algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+
 	#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
 	#algorithms['W_W0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
 

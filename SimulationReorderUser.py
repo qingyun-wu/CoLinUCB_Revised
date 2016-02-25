@@ -6,14 +6,15 @@ import os.path
 import matplotlib.pyplot as plt
 # local address to save simulated users, simulated articles, and results
 from conf import sim_files_folder, save_address
-from util_functions import featureUniform
+from util_functions import *
 from Articles import ArticleManager
 from Users import UserManager
-from LinUCB import *
+from LinUCB import N_LinUCBAlgorithm, Uniform_LinUCBAlgorithm
 from GOBLin import GOBLinAlgorithm
 from CoLin import AsyCoLinUCBAlgorithm, syncCoLinUCBAlgorithm
 from W_W0Alg import W_W0_Algorithm
 from W_Alg import WAlgorithm, WknowThetaAlgorithm
+import pickle
 
 class simulateOnlineData(object):
 	def __init__(self, dimension, iterations, articles, users, 
@@ -84,6 +85,12 @@ class simulateOnlineData(object):
 					
 			W[ui.id] /= sum(W[ui.id])
 			W0[ui.id] /= sum(W0[ui.id])
+		'''
+		controlW = 0
+		W = controlW* np.ones([n,n]) + (1-controlW )*np.identity(n)
+		for ui in self.users:
+			W[ui.id] /= sum(W[ui.id])
+		'''
 
 		return [W, W0]
 
@@ -148,12 +155,17 @@ class simulateOnlineData(object):
 
 	def runAlgorithms(self, algorithms):
 		self.startTime = datetime.datetime.now()
-		timeRun = self.startTime.strftime('_%m_%d_%H_%M') 
+		timeRun = self.startTime.strftime('_%m_%d_%H') 
 		filenameWriteRegret = os.path.join(save_address, 'AccRegret' + timeRun + '.csv')
 		filenameWritePara = os.path.join(save_address, 'ParameterEstimation' + timeRun + '.csv')
 
+		filenameWriteResult = os.path.join(save_address, 'Results_t' + timeRun + '.csv')
+
+
 		# compute co-theta for every user
 		self.CoTheta()
+
+		data_log=[]   #Save list of observation_entry to construct a log
 
 		tim_ = []
 		BatchCumlateRegret = {}
@@ -177,6 +189,18 @@ class simulateOnlineData(object):
 				CoThetaDiffList[alg_name] = []
 			if alg.CanEstimateW:
 				WDiffList[alg_name] = []
+
+		for alg_name, alg in userReorderAlgorithms.items():
+			AlgRegret[alg_name] = []
+			BatchCumlateRegret[alg_name] = []
+
+			if alg.CanEstimateUserPreference:
+				ThetaDiffList[alg_name] = []
+			if alg.CanEstimateCoUserPreference:
+				CoThetaDiffList[alg_name] = []
+			if alg.CanEstimateW:
+				WDiffList[alg_name] = []
+
 		'''
 		with open(filenameWriteRegret, 'w') as f:
 			f.write('Time(Iteration)')
@@ -191,8 +215,16 @@ class simulateOnlineData(object):
 		'''
 		
 		# Loop begin
+		for alg_name, alg in algorithms.items():
+			if alg.CanEstimateUserPreference:
+				ThetaDiff[alg_name] = 0
+			if alg.CanEstimateCoUserPreference:
+				CoThetaDiff[alg_name] = 0
+			if alg.CanEstimateW:
+				WDiff[alg_name] = 0
 		for iter_ in range(self.iterations):
 			# prepare to record theta estimation error
+			'''
 			for alg_name, alg in algorithms.items():
 				if alg.CanEstimateUserPreference:
 					ThetaDiff[alg_name] = 0
@@ -200,16 +232,20 @@ class simulateOnlineData(object):
 					CoThetaDiff[alg_name] = 0
 				if alg.CanEstimateW:
 					WDiff[alg_name] = 0
+			'''
+			
 					
 			for u in self.users:
 				self.regulateArticlePool() # select random articles
-
+				
 				noise = self.noise()
 				#get optimal reward for user x at time t
-				OptimalReward = self.GetOptimalReward(u, self.articlePool) + noise
+				OptimalReward = self.GetOptimalReward(u, self.articlePool)
+				data_log.append(observation_entry(u, self.articlePool, OptimalReward, noise))
 							
 				for alg_name, alg in algorithms.items():
-					pickedArticle = alg.decide(self.articlePool, u.id)
+					OptimalReward = OptimalReward + noise
+					pickedArticle, var = alg.decide(self.articlePool, u.id)
 					reward = self.getReward(u, pickedArticle) + noise
 					alg.updateParameters(pickedArticle, reward, u.id)
 
@@ -222,8 +258,7 @@ class simulateOnlineData(object):
 					if alg.CanEstimateCoUserPreference:
 						CoThetaDiff[alg_name] += self.getL2Diff(u.CoTheta, alg.getCoTheta(u.id))
 					if alg.CanEstimateW:
-						WDiff[alg_name] += self.getL2Diff(self.W.T[u.id], alg.getW(u.id))	
-			
+						WDiff[alg_name] += self.getL2Diff(self.W.T[u.id], alg.getW(u.id))
 			if 'syncCoLinUCB' in algorithms:
 				algorithms['syncCoLinUCB'].LateUpdate()	
 
@@ -234,12 +269,98 @@ class simulateOnlineData(object):
 					CoThetaDiffList[alg_name] += [CoThetaDiff[alg_name]/userSize]
 				if alg.CanEstimateW:
 					WDiffList[alg_name] += [WDiff[alg_name]/userSize]	
-				
+
+				if alg.CanEstimateUserPreference:
+					ThetaDiff[alg_name] = 0
+				if alg.CanEstimateCoUserPreference:
+					CoThetaDiff[alg_name] = 0
+				if alg.CanEstimateW:
+					WDiff[alg_name] = 0
+
 			if iter_%self.batchSize == 0:
 				self.batchRecord(iter_)
 				tim_.append(iter_)
 				for alg_name in algorithms.iterkeys():
 					BatchCumlateRegret[alg_name].append(sum(AlgRegret[alg_name]))
+				
+				#Reorder users according to variance
+		Retim_ = []
+		for alg_name, alg in userReorderAlgorithms.items():
+			ReorderBatchSize = 10
+			minibatchCounter = 0
+			ReorderIter =0
+			cc =0
+
+			if alg.CanEstimateUserPreference:
+					ThetaDiff[alg_name] = 0
+			if alg.CanEstimateCoUserPreference:
+				CoThetaDiff[alg_name] = 0
+			if alg.CanEstimateW:
+				WDiff[alg_name] = 0
+			while (minibatchCounter+1)*ReorderBatchSize <= len(data_log):
+				
+				choosenLineList = []
+				for i in range(ReorderBatchSize):
+					ReorderIter +=1
+					noise = self.noise()
+					minVar = float('+inf')
+					choosenLine = data_log[2]
+					for l in data_log[minibatchCounter*ReorderBatchSize:(minibatchCounter+1)*ReorderBatchSize]:
+						if l not in choosenLineList:
+							p, var = alg.decide(l.articlePool, l.user.id)
+							if minVar > var:
+								minVar = var
+								choosenLine = l
+					choosenLineList.append(choosenLine)
+					#print choosenLine.user.id
+
+
+					OptimalReward = choosenLine.OptimalReward + choosenLine.noise
+					pickedArticle = alg.decide(choosenLine.articlePool, choosenLine.user.id)[0]
+					reward = self.getReward(choosenLine.user, pickedArticle) + choosenLine.noise
+					alg.updateParameters(pickedArticle, reward, choosenLine.user.id)
+					regret = OptimalReward - reward	
+					AlgRegret[alg_name].append(regret)
+
+
+					#update parameter estimation record
+					if alg.CanEstimateUserPreference:
+						ThetaDiff[alg_name] += self.getL2Diff(choosenLine.user.theta, alg.getTheta(choosenLine.user.id))
+					if alg.CanEstimateCoUserPreference:
+						CoThetaDiff[alg_name] += self.getL2Diff(choosenLine.user.CoTheta, alg.getCoTheta(choosenLine.user.id))
+					if alg.CanEstimateW:
+						WDiff[alg_name] += self.getL2Diff(self.W.T[choosenLine.user.id], alg.getW(choosenLine.user.id))
+					#print (ReorderIter - 1)%len(self.users)
+					if (ReorderIter-1) % len(self.users)==0:
+						if alg.CanEstimateUserPreference:
+							ThetaDiffList[alg_name] += [ThetaDiff[alg_name]/userSize]
+						if alg.CanEstimateCoUserPreference:
+							CoThetaDiffList[alg_name] += [CoThetaDiff[alg_name]/userSize]
+						if alg.CanEstimateW:
+							WDiffList[alg_name] += [WDiff[alg_name]/userSize]
+
+						if alg.CanEstimateUserPreference:
+							ThetaDiff[alg_name] = 0
+						if alg.CanEstimateCoUserPreference:
+							CoThetaDiff[alg_name] = 0
+						if alg.CanEstimateW:
+							WDiff[alg_name] = 0
+
+					#print ReorderIter,  ((ReorderIter-1)/len(self.users)), self.batchSize, ((ReorderIter-1)/len(self.users)) %self.batchSize
+					if ((ReorderIter-1)/len(self.users)) %self.batchSize == 0:
+						#print 'Yes'
+						#self.batchRecord((ReorderIter-1)/len(self.users))
+						Retim_.append((ReorderIter-1)/len(self.users))
+						BatchCumlateRegret[alg_name].append(sum(AlgRegret[alg_name]))
+						#print 're', BatchCumlateRegret[alg_name]	
+				minibatchCounter +=1
+				
+
+
+
+					
+				
+			
 				'''
 				with open(filenameWriteRegret, 'a+') as f:
 					f.write(str(iter_))
@@ -256,8 +377,25 @@ class simulateOnlineData(object):
 		# plot the results	
 		f, axa = plt.subplots(2, sharex=True)
 		for alg_name in algorithms.iterkeys():	
+			#print len(tim_), len(BatchCumlateRegret[alg_name])
 			axa[0].plot(tim_, BatchCumlateRegret[alg_name],label = alg_name)
 			print '%s: %.2f' % (alg_name, BatchCumlateRegret[alg_name][-1])
+		
+			with open(filenameWriteResult, 'a+') as f:
+				f.write(str(alg_name)+ ','+ str( BatchCumlateRegret[alg_name][-1]))
+				f.write('\n')
+			
+		for alg_name in userReorderAlgorithms.iterkeys():	
+			axa[0].plot(Retim_, BatchCumlateRegret[alg_name],label = alg_name)
+			#print BatchCumlateRegret[alg_name]
+
+			print '%s: %.2f' % (alg_name, BatchCumlateRegret[alg_name][-1])
+			
+			with open(filenameWriteResult, 'a+') as f:
+				print str(filenameWriteResult)
+				f.write(str(alg_name)+ ','+ str( BatchCumlateRegret[alg_name][-1]))
+				f.write('\n')
+			
 		axa[0].legend(loc='lower right',prop={'size':9})
 		axa[0].set_xlabel("Iteration")
 		axa[0].set_ylabel("Regret")
@@ -266,7 +404,13 @@ class simulateOnlineData(object):
 		# plot the estimation error of co-theta
 		time = range(self.iterations)
 		for alg_name, alg in algorithms.items():
+			if alg.CanEstimateUserPreference:	
+				axa[1].plot(time, ThetaDiffList[alg_name], label = alg_name + '_Theta')
+			if alg.CanEstimateCoUserPreference:
+				axa[1].plot(time, CoThetaDiffList[alg_name], label = alg_name + '_CoTheta')
+		for alg_name, alg in userReorderAlgorithms.items():
 			if alg.CanEstimateUserPreference:
+				print len(time),  len(ThetaDiffList[alg_name])
 				axa[1].plot(time, ThetaDiffList[alg_name], label = alg_name + '_Theta')
 			if alg.CanEstimateCoUserPreference:
 				axa[1].plot(time, CoThetaDiffList[alg_name], label = alg_name + '_CoTheta')
@@ -276,11 +420,11 @@ class simulateOnlineData(object):
 		axa[1].set_ylabel("L2 Diff")
 		axa[1].set_yscale('log')
 		axa[1].set_title("Parameter estimation error")
-		plt.show()
+		#plt.show()
 
 if __name__ == '__main__':
 	iterations = 300
-	NoiseScale = .01
+	NoiseScale = 0.1
 
 	dimension = 5
 	alpha  = 0.2
@@ -295,11 +439,11 @@ if __name__ == '__main__':
 	UserGroups = 5	
 	
 	poolSize = 10
-	batchSize = 10
+	batchSize = 5
 
 	# Matrix parameters
 	matrixNoise = 0.01
-	sparseLevel = 10  # if smaller or equal to 0 or larger or enqual to usernum, matrix is fully connected
+	sparseLevel = 0  # if smaller or equal to 0 or larger or enqual to usernum, matrix is fully connected
 
 
 	# Parameters for GOBLin
@@ -338,19 +482,24 @@ if __name__ == '__main__':
 
 	print "Starting for ", simExperiment.simulation_signature
 
-	algorithms = {}
-	
-	algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
-	algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
-	algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
-	algorithms['AsyncCoLinUCB'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
-	
-	#algorithms['UniformLinUCB'] = Uniform_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_)
-	#algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
-	#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
-	#algorithms['W_W0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
+	for i in range(10):
+		algorithms = {}
+		
+		#algorithms['LinUCB'] = N_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
+		#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
+		#algorithms['syncCoLinUCB'] = syncCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+		#algorithms['AsyncCoLinUCB_100'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+		
+		#algorithms['UniformLinUCB'] = Uniform_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_)
+		#algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+		#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
+		#algorithms['W_W0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
 
-	#algorithms['eGreedy'] = eGreedyAlgorithm(epsilon = eGreedy)
-	#algorithms['UCB1'] = UCB1Algorithm()
-	
-	simExperiment.runAlgorithms(algorithms)
+		#algorithms['eGreedy'] = eGreedyAlgorithm(epsilon = eGreedy)
+		#algorithms['UCB1'] = UCB1Algorithm()
+		userReorderAlgorithms = {}
+		userReorderAlgorithms['CoLinReorder_var_noise0.1_100/10'] = AsyCoLinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW())
+		#userReorderAlgorithms['LinUCBReorder'] = N_LinUCBAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
+
+		
+		simExperiment.runAlgorithms(algorithms)

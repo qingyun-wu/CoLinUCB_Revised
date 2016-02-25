@@ -67,3 +67,9 @@ def matrixize(V, C_dimension):
 		temp.T[i] = V[i*C_dimension : (i+1)*C_dimension]
 	W = temp
 	return W
+class observation_entry():
+	def __init__(self, user, articlePool, OptimalReward, noise):
+		self.user = user
+		self.articlePool = articlePool
+		self.OptimalReward = OptimalReward
+		self.noise = noise

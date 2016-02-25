@@ -8,6 +8,9 @@ class User():
 		self.id = id
 		self.theta = theta
 		self.CoTheta = CoTheta
+		self.uncertainty = 0.0
+	def updateUncertainty(uncertainty):
+		self.uncertainty = uncertainty
 
 
 class UserManager():
