@@ -103,7 +103,7 @@ class WStruct:
 		# Basic stat in estimating Theta
 		self.T_A = lambda_*np.identity(n = featureDimension*userNum)
 		self.T_b = np.zeros(featureDimension*userNum)
-		#self.UserTheta = np.zeros(shape = (featureDimension, userNum))
+		self.UserTheta = np.zeros(shape = (featureDimension, userNum))
 		self.UserTheta = np.random.random((featureDimension, userNum))
 		
 
@@ -165,6 +165,7 @@ class WStruct:
 		W_var = np.sqrt(np.dot( np.dot(TempFeatureV, self.W_CCA) , TempFeatureV))
 
 		pta = mean + alpha * (var + W_var)
+		#pta = mean + alpha * var
 		return pta
 
 		

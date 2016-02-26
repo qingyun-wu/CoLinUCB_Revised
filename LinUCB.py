@@ -102,8 +102,9 @@ class Hybrid_LinUCBAlgorithm(object):
 		self.alpha = alpha
 		self.USER = Hybrid_LinUCBUserStruct(dimension, lambda_, userFeatureList)
 
+		
+		self.CanEstimateCoUserPreference = True
 		self.CanEstimateUserPreference = False
-		self.CanEstimateCoUserPreference = False
 		self.CanEstimateW = False
 	def decide(self, pool_articles, userID):
 		maxPTA = float('-inf')
@@ -117,7 +118,7 @@ class Hybrid_LinUCBAlgorithm(object):
 		return articlePicked
 	def updateParameters(self, articlePicked, click, userID):
 		self.USER.updateParameters(articlePicked, click, userID)
-	def getLearntParameters(self, userID):
+	def getCoTheta(self, userID):
 		return self.USER.users[userID].UserTheta
 
 
@@ -132,6 +133,10 @@ class LinUCBAlgorithm:
 
 		self.dimension = dimension
 		self.alpha = alpha
+
+		self.CanEstimateCoUserPreference = True 
+		self.CanEstimateUserPreference = False
+		self.CanEstimateW = False
 
 	def decide(self, pool_articles, userID):
 		maxPTA = float('-inf')
@@ -149,7 +154,7 @@ class LinUCBAlgorithm:
 	def updateParameters(self, articlePicked, click, userID):
 		self.users[userID].updateParameters(articlePicked, click)
 		
-	def getLearntParameters(self, userID):
+	def getCoTheta(self, userID):
 		return self.users[userID].UserTheta
 
 

@@ -59,6 +59,10 @@ class CLUBAlgorithm(LinUCBAlgorithm):
 		self.clusters = []
 		g = csr_matrix(self.Graph)
 		N_components, components = connected_components(g)
+
+		self.CanEstimateCoUserPreference = False
+		self.CanEstimateUserPreference = False
+		self.CanEstimateW = False
 			
 	def decide(self,pool_articles,userID):
 		self.users[userID].updateParametersofClusters(self.clusters,userID,self.Graph, self.users)
