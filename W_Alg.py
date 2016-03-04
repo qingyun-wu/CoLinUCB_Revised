@@ -168,7 +168,18 @@ class WStruct:
 		#pta = mean + alpha * var
 		return pta
 
-		
+
+
+class W_W0_Struct(WStruct):
+	def __init__(self, featureDimension, lambda_, eta_, userNum, W0):	
+		WStruct.__init__(self, featureDimension, lambda_, eta_, userNum)
+		self.W = W0
+
+		self.CoTheta = np.dot(self.UserTheta, self.W)
+
+		self.BigW = np.kron(np.transpose(self.W), np.identity(n=featureDimension))
+
+	
 
 class WAlgorithm:
 	def __init__(self, dimension, alpha, lambda_, eta_, n):  # n is number of users
@@ -206,6 +217,11 @@ class WAlgorithm:
 
 	def getA(self):
 		return self.USERS.A
+		
+class W_W0_Algorithm(WAlgorithm):
+	def __init__(self, dimension, alpha, lambda_, eta_, n, W0):  # n is number of users
+		WAlgorithm.__init__(self, dimension, alpha, lambda_, eta_, n)
+		self.USERS = W_W0_Struct(dimension, lambda_, eta_, n, W0)	
 
 class WknowThetaAlgorithm(WAlgorithm):	
 	def __init__(self, dimension, alpha, lambda_, eta_, n, theta):

@@ -15,7 +15,6 @@ from CoLin import *
 from GOBLin import *
 
 from W_Alg import *
-from W_W0Alg import *
 from eGreedyUCB1 import *
 from scipy.linalg import sqrtm
 import math
@@ -366,7 +365,7 @@ class simulateOnlineData():
 
 
 if __name__ == '__main__':
-	iterations = 300
+	iterations = 200
 	NoiseScale = .1
 	matrixNoise = 0.3
 
@@ -376,7 +375,7 @@ if __name__ == '__main__':
 	epsilon = 0 # initialize W
 	eta_ = 0.1
 
-	n_articles = 1000
+	n_articles = 10000
 	ArticleGroups = 5
 
 	n_users = 10
@@ -457,18 +456,20 @@ if __name__ == '__main__':
 	if algName =='CLUB':
 		algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2)	
 	if algName =='ALL':
-		#algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
+		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
 		#algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()))
 		#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
 		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
 		#algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2)	
-		algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
-		algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
+		algorithms['Learn_W'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+		#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
+		algorithms['WknowW0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
 	if algName == 'LearnW':
 		algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
-	if algName == 'WwithTheta':
+	if algName == 'WknowTheta':
 		algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
-	#algorithms['W_W0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
+	if algName == 'WknowW0':
+		algorithms['WknowW0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
 
 	#algorithms['eGreedy'] = eGreedyAlgorithm(epsilon = eGreedy)
 	#algorithms['UCB1'] = UCB1Algorithm()
