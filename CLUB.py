@@ -44,7 +44,7 @@ class CLUBUserStruct(LinUCBUserStruct):
 		return pta
 
 class CLUBAlgorithm(LinUCBAlgorithm):
-	def __init__(self,dimension,alpha,lambda_,n,alpha_2):
+	def __init__(self,dimension,alpha,lambda_,n,alpha_2, cluster_init="Complete"):
 		self.time = 0
 		#N_LinUCBAlgorithm.__init__(dimension = dimension, alpha=alpha,lambda_ = lambda_,n=n)
 		self.users = []
@@ -55,10 +55,17 @@ class CLUBAlgorithm(LinUCBAlgorithm):
 		self.dimension = dimension
 		self.alpha = alpha
 		self.alpha_2 = alpha_2
-		self.Graph = np.ones([n,n]) 
-		self.clusters = []
-		g = csr_matrix(self.Graph)
-		N_components, components = connected_components(g)
+		if (cluster_init=="Erdos-Renyi"):
+			p = 3*math.log(n)/n
+			self.Graph = np.random.choice([0, 1], size=(n,n), p=[1-p, p])
+			self.clusters = []
+			g = csr_matrix(self.Graph)
+			N_components, components = connected_components(g)
+		else:
+			self.Graph = np.ones([n,n]) 
+			self.clusters = []
+			g = csr_matrix(self.Graph)
+			N_components, components = connected_components(g)
 
 		self.CanEstimateCoUserPreference = False
 		self.CanEstimateUserPreference = False
