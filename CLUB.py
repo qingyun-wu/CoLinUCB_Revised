@@ -40,7 +40,7 @@ class CLUBUserStruct(LinUCBUserStruct):
 	def getProb(self, alpha, article_FeatureVector,time):
 		mean = np.dot(self.CTheta, article_FeatureVector)
 		var = np.sqrt(np.dot(np.dot(article_FeatureVector, self.CAInv),  article_FeatureVector))
-		pta = mean + 0.002* alpha * var*np.sqrt(math.log10(time+1))
+		pta = mean +  alpha * var*np.sqrt(math.log10(time+1))
 		return pta
 
 class CLUBAlgorithm(LinUCBAlgorithm):

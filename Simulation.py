@@ -13,6 +13,7 @@ from CLUB import *
 from LinUCB import *
 from CoLin import *
 from GOBLin import *
+from COFIBA import *
 
 from W_Alg import *
 from eGreedyUCB1 import *
@@ -123,14 +124,16 @@ class simulateOnlineData():
  		print 'W.T', W.T
 		return W.T
 	def initializeW0(self,W):
-		W0 = W
+		W0 = W.copy()
 		for i in range(W.shape[0]):
 			for j in range(W.shape[1]):
 				W0[i][j] = W[i][j] + self.matrixNoise()
 				if W0[i][j] < 0:
 					W0[i][j] = 0
-			W[i] /= sum(W[i]) 
+			W0[i] /= sum(W0[i]) 
+		#W0 = np.random.random((W.shape[0], W.shape[1]))  #test random ini
 		print 'W0.T', W0.T
+
 		return W0.T
 
 	def initializeGW(self,G, Gepsilon):
@@ -275,6 +278,11 @@ class simulateOnlineData():
 					if alg_name =='CLUB':
 						alg.updateParameters(pickedArticle.featureVector, reward, u.id)
 						n_components= alg.updateGraphClusters(u.id,'False')
+					elif alg_name == 'COFIBA':
+						alg.updateParameters(pickedArticle.featureVector, reward, u.id)
+						itemClusterNum = alg.Iclusters[pickedArticle.id]
+						alg.updateUserClusters(u.id, pickedArticle.featureVector, itemClusterNum)
+						alg.updateItemClusters(u.id, pickedArticle, itemClusterNum, self.articlePool)
 					else:
 						alg.updateParameters(pickedArticle, reward, u.id)
 
@@ -287,8 +295,13 @@ class simulateOnlineData():
 					if alg.CanEstimateUserPreference:
 						ThetaDiffList_user[alg_name] += [self.getL2Diff(u.theta, alg.getTheta(u.id))]
 					if alg.CanEstimateW:
-						WDiffList_user[alg_name] +=  [self.getL2Diff(self.W.T[u.id], alg.getW(u.id))]	
-								
+						WDiffList_user[alg_name] +=  [self.getL2Diff(self.W.T, alg.getW(u.id))]
+						#WDiffList_user[alg_name] +=  [self.getL2Diff(self.W.T[u.id], alg.getW(u.id))]
+						'''
+						print 'w',self.W
+						print  'get', alg.getW(u.id)
+						print self.getL2Diff(self.W.T, alg.getW(u.id)), WDiffList_user[alg_name]	
+						'''	
 
 			for alg_name, alg in algorithms.items():
 				if alg.CanEstimateCoUserPreference:
@@ -297,6 +310,7 @@ class simulateOnlineData():
 					ThetaDiffList[alg_name] += [sum(ThetaDiffList_user[alg_name])/userSize]
 				if alg.CanEstimateW:
 					WDiffList[alg_name] += [sum(WDiffList_user[alg_name])/userSize]
+					#WDiffList[alg_name] += [WDiffList_user[alg_name]]
 				
 			if iter_%self.batchSize == 0:
 				self.batchRecord(iter_)
@@ -365,7 +379,7 @@ class simulateOnlineData():
 
 
 if __name__ == '__main__':
-	iterations = 200
+	iterations = 100
 	NoiseScale = .1
 	matrixNoise = 0.3
 
@@ -375,10 +389,10 @@ if __name__ == '__main__':
 	epsilon = 0 # initialize W
 	eta_ = 0.1
 
-	n_articles = 10000
+	n_articles = 1000
 	ArticleGroups = 5
 
-	n_users = 10
+	n_users = 40
 	UserGroups = 5	
 
 	poolSize = 10
@@ -392,7 +406,7 @@ if __name__ == '__main__':
 	sparseLevel=0
  
 	eGreedy = 0.3
-	CLUB_alpha_2 = 0.5
+	CLUB_alpha_2 = 2.0
 
 	parser = argparse.ArgumentParser(description = '')
 	parser.add_argument('--alg', dest='alg', help='Select a specific algorithm, could be CoLin, GOBLin, AsyncCoLin, or SyncCoLin')
@@ -425,8 +439,8 @@ if __name__ == '__main__':
 	# Similarly, we can choose to simulate articles every time we run the program or simulate articles once, save it to 'sim_files_folder', and keep using it.
 	AM = ArticleManager(dimension, n_articles=n_articles, ArticleGroups = ArticleGroups,
 			FeatureFunc=featureUniform,  argv={'l2_limit':1})
-	#articles = AM.simulateArticlePool()
-	#AM.saveArticles(articles, articlesFilename, force=False)
+	articles = AM.simulateArticlePool()
+	AM.saveArticles(articles, articlesFilename, force=False)
 	articles = AM.loadArticles(articlesFilename)
 
 	simExperiment = simulateOnlineData(dimension  = dimension,
@@ -454,16 +468,22 @@ if __name__ == '__main__':
 	if algName == 'HybridLinUCB':
 		algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()))
 	if algName =='CLUB':
-		algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2)	
+		algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2, cluster_init = 'Erdos-Renyi')	
+	if algName == 'COFIBA':
+		algorithms['COFIBA'] = COFIBAAlgorithm(dimension = dimension, alpha = alpha,alpha_2 = CLUB_alpha_2,lambda_ = lambda_, n = n_users,itemNum= n_articles,cluster_init = 'Erdos-Renyi')
 	if algName =='ALL':
 		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
 		#algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()))
 		#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
 		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
 		#algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2)	
-		algorithms['Learn_W'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+		#algorithms['Learn_W'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+		#algorithms['LearnW_W0'] = LearnW_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
 		#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
-		algorithms['WknowW0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
+		#algorithms['W0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
+		algorithms['COFIBA'] = COFIBAAlgorithm(dimension = dimension, alpha = alpha,alpha_2 = CLUB_alpha_2,lambda_ = lambda_, n = n_users,itemNum= n_articles,cluster_init = 'Erdos-Renyi')
+		algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2, cluster_init = 'Erdos-Renyi')	
+
 	if algName == 'LearnW':
 		algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
 	if algName == 'WknowTheta':
