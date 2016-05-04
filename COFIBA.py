@@ -126,7 +126,7 @@ class COFIBAAlgorithm(LinUCBAlgorithm):
 					if diff > CB:
 						UserNeighbor[a.id][userID][i] = 0
 						UserNeighbor[a.id][i][userID] = 0
-				if UserNeighbor[a.id].all() != self.UGraph[itemClusterNum].all():
+				if not np.array_equal(UserNeighbor[a.id], self.UGraph[itemClusterNum]):
 					self.IGraph[chosenItem.id][a.id] = 0
 					self.IGraph[a.id][chosenItem.id] = 0
 					#print 'delete edge'
