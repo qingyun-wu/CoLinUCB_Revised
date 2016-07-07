@@ -14,7 +14,7 @@ from LinUCB import *
 from CoLin import *
 from GOBLin import *
 from COFIBA import *
-
+from CoLin_rankone import *
 from W_Alg import *
 from eGreedyUCB1 import *
 from scipy.linalg import sqrtm
@@ -139,7 +139,7 @@ class simulateOnlineData():
 	def initializeGW(self,G, Gepsilon):
 		n = len(self.users)	
  		L = csgraph.laplacian(G, normed = False)
- 		I = np.identity(n = G.shape[0])
+ 		I = np.identity(n = G.shape[0]) 
  		GW = I + Gepsilon*L  # W is a double stochastic matrix
  		print 'GW', GW
 		return GW.T
@@ -411,8 +411,8 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description = '')
 	parser.add_argument('--alg', dest='alg', help='Select a specific algorithm, could be CoLin, GOBLin, AsyncCoLin, or SyncCoLin')
 
-	parser.add_argument('--showheatmap', action='store_true',
-	                help='Show heatmap of relation matrix.') 
+	parser.add_argument('--RankoneInverse', action='store_true',
+	                help='Use Rankone Correction to do matrix inverse') 
 	parser.add_argument('--userNum', dest = 'userNum', help = 'Set the userNum, can be 40, 80, 100')
 	parser.add_argument('--Sparsity', dest = 'SparsityLevel', help ='Set the SparsityLevel by choosing the top M most connected users, should be smaller than userNum, when equal to userNum, we are using a full connected graph')
 	parser.add_argument('--NoiseScale', dest = 'NoiseScale', help = 'Set NoiseScale')
@@ -424,6 +424,8 @@ if __name__ == '__main__':
 	sparseLevel = int(args.SparsityLevel)
 	NoiseScale = float(args.NoiseScale)
 	matrixNoise = float(args.matrixNoise)
+	RankoneInverse =args.RankoneInverse
+	print RankoneInverse
 	
 	
 	userFilename = os.path.join(sim_files_folder, "users_"+str(n_users)+"+dim-"+str(dimension)+ "Ugroups" + str(UserGroups)+".json")
@@ -460,11 +462,13 @@ if __name__ == '__main__':
 	algorithms = {}
 	
 	if algName == 'LinUCB':
-		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
+		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, RankoneInverse = RankoneInverse)
 	if algName == 'GOBLin':
 		algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
 	if algName =='CoLin':
-		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
+		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse = RankoneInverse)
+	if algName == 'CoLinRank1':
+		algorithms['CoLinRank1'] = CoLinRankoneAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse = RankoneInverse)
 	if algName == 'HybridLinUCB':
 		algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()))
 	if algName =='CLUB':
@@ -472,17 +476,17 @@ if __name__ == '__main__':
 	if algName == 'COFIBA':
 		algorithms['COFIBA'] = COFIBAAlgorithm(dimension = dimension, alpha = alpha,alpha_2 = CLUB_alpha_2,lambda_ = lambda_, n = n_users,itemNum= n_articles,cluster_init = 'Erdos-Renyi')
 	if algName =='ALL':
-		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
-		#algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()))
+		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, RankoneInverse = RankoneInverse)
+		#algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()),RankoneInverse = RankoneInverse )
 		#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
-		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
+		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse=RankoneInverse)
 		#algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2)	
 		#algorithms['Learn_W'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
 		#algorithms['LearnW_W0'] = LearnW_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
 		#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
 		#algorithms['W0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
-		algorithms['COFIBA'] = COFIBAAlgorithm(dimension = dimension, alpha = alpha,alpha_2 = CLUB_alpha_2,lambda_ = lambda_, n = n_users,itemNum= n_articles,cluster_init = 'Erdos-Renyi')
-		algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2, cluster_init = 'Erdos-Renyi')	
+		#algorithms['COFIBA'] = COFIBAAlgorithm(dimension = dimension, alpha = alpha,alpha_2 = CLUB_alpha_2,lambda_ = lambda_, n = n_users,itemNum= n_articles,cluster_init = 'Erdos-Renyi')
+		#algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2, cluster_init = 'Erdos-Renyi')	
 
 	if algName == 'LearnW':
 		algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)

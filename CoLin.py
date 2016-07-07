@@ -7,7 +7,7 @@ from util_functions import vectorize, matrixize
 
 
 class CoLinUserSharedStruct(object):
-	def __init__(self, featureDimension, lambda_, userNum, W):
+	def __init__(self, featureDimension, lambda_, userNum, W, RankoneInverse):
 		self.W = W
 		self.userNum = userNum
 		self.A = lambda_*np.identity(n = featureDimension*userNum)
@@ -18,13 +18,18 @@ class CoLinUserSharedStruct(object):
 
 		self.UserTheta = np.zeros(shape = (featureDimension, userNum))
 		self.CoTheta = np.zeros(shape = (featureDimension, userNum))
+		self.RankoneInverse = RankoneInverse
 
 		self.BigW = np.kron(np.transpose(W), np.identity(n=featureDimension))
 	def updateParameters(self, articlePicked, click,  userID):
 		X = vectorize(np.outer(articlePicked.featureVector, self.W.T[userID])) 
 		self.A += np.outer(X, X)	
 		self.b += click*X
-		self.AInv =  np.linalg.inv(self.A)
+		if self.RankoneInverse:
+			temp = np.dot(self.AInv, X)
+			self.AInv = self.AInv - (np.outer(temp,temp))/(1.0+np.dot(np.transpose(X),temp))
+		else:
+			self.AInv =  np.linalg.inv(self.A)
 
 		self.UserTheta = matrixize(np.dot(self.AInv, self.b), len(articlePicked.featureVector)) 
 		self.CoTheta = np.dot(self.UserTheta, self.W)
@@ -48,8 +53,8 @@ class CoLinUserSharedStruct(object):
 		
 #---------------CoLinUCB(fixed user order) algorithms: Asynisized version and Synchorized version		
 class CoLinAlgorithm:
-	def __init__(self, dimension, alpha, lambda_, n, W):  # n is number of users
-		self.USERS = CoLinUserSharedStruct(dimension, lambda_, n, W)
+	def __init__(self, dimension, alpha, lambda_, n, W, RankoneInverse = False):  # n is number of users
+		self.USERS = CoLinUserSharedStruct(dimension, lambda_, n, W, RankoneInverse)
 		self.dimension = dimension
 		self.alpha = alpha
 		self.W = W
@@ -86,8 +91,8 @@ class CoLinAlgorithm:
 
 #-----------CoLinUCB select user algorithm(only has asynchorize version)-----
 class CoLin_SelectUserAlgorithm:
-	def __init__(self, dimension, alpha, lambda_, n, W):  # n is number of users
-		self.USERS = AsyCoLinUCBUserSharedStruct(dimension, lambda_, n, W)  
+	def __init__(self, dimension, alpha, lambda_, n, W, RankoneInverse = False):  # n is number of users
+		self.USERS = CoLinUCBUserSharedStruct(dimension, lambda_, n, W, RankoneInverse)  
 		self.dimension = dimension
 		self.alpha = alpha
 		self.W = W
