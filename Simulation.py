@@ -14,7 +14,6 @@ from LinUCB import *
 from CoLin import *
 from GOBLin import *
 from COFIBA import *
-from CoLin_rankone import *
 from W_Alg import *
 from eGreedyUCB1 import *
 from scipy.linalg import sqrtm
@@ -425,8 +424,6 @@ if __name__ == '__main__':
 	NoiseScale = float(args.NoiseScale)
 	matrixNoise = float(args.matrixNoise)
 	RankoneInverse =args.RankoneInverse
-	print RankoneInverse
-	
 	
 	userFilename = os.path.join(sim_files_folder, "users_"+str(n_users)+"+dim-"+str(dimension)+ "Ugroups" + str(UserGroups)+".json")
 	
@@ -464,7 +461,7 @@ if __name__ == '__main__':
 	if algName == 'LinUCB':
 		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, RankoneInverse = RankoneInverse)
 	if algName == 'GOBLin':
-		algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
+		algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW(), RankoneInverse = RankoneInverse )
 	if algName =='CoLin':
 		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse = RankoneInverse)
 	if algName == 'CoLinRank1':
@@ -478,7 +475,7 @@ if __name__ == '__main__':
 	if algName =='ALL':
 		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, RankoneInverse = RankoneInverse)
 		#algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()),RankoneInverse = RankoneInverse )
-		#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
+		#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW(), RankoneInverse = RankoneInverse )
 		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse=RankoneInverse)
 		#algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2)	
 		#algorithms['Learn_W'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
