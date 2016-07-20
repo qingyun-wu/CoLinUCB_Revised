@@ -56,8 +56,9 @@ def getbounds(dim):
 
 
 class WStruct_batch_Cons:
-	def __init__(self, featureDimension, lambda_, eta_, userNum):
-
+	def __init__(self, featureDimension, lambda_, eta_, userNum, windowSize =20):
+		self.windowSize = windowSize
+		self.counter = 0
 		self.userNum = userNum
 		self.lambda_ = lambda_
 		# Basic stat in estimating Theta
@@ -83,6 +84,7 @@ class WStruct_batch_Cons:
 			self.W_y_arr.append([])
 		
 	def updateParameters(self, articlePicked, click,  userID):	
+		self.counter +=1
 		self.Wlong = vectorize(self.W)
 		featureDimension = len(articlePicked.featureVector)
 		T_X = vectorize(np.outer(articlePicked.featureVector, self.W.T[userID])) 
@@ -103,18 +105,37 @@ class WStruct_batch_Cons:
 			w = np.asarray(w)
 			res = np.sum((np.dot(self.W_X_arr[userID], w) - self.W_y_arr[userID])**2, axis = 0) + self.lambda_*np.linalg.norm(w)
 			return res
+		def fun(w,X,Y):
+			w = np.asarray(w)
+			res = np.sum((np.dot(X, w) - Y)**2, axis = 0) + self.lambda_*np.linalg.norm(w)
+			return res
+
 		'''	
 		def fprime(w):
 			w = np.asarray(w)
 			res = self.W_X_arr[userID]*(np.dot(np.transpose(self.W_X_arr[userID]),w) - self.W_y_arr[userID]) + self.lambda_*w
 			return res
 		'''
-		current = self.W.T[userID]
-		res = minimize(fun, current, constraints = getcons(len(self.W)), method ='SLSQP', bounds=getbounds(len(self.W)), options={'disp': False})
-		if res.x.any()>1 or res.x.any <0:
-			print 'error'
-			print res.x
-		self.W.T[userID] = res.x
+		'''
+		if self.counter%self.windowSize ==0:
+			current = self.W.T[userID]
+			res = minimize(fun, current, constraints = getcons(len(self.W)), method ='SLSQP', bounds=getbounds(len(self.W)), options={'disp': False})
+			if res.x.any()>1 or res.x.any <0:
+				print 'error'
+				print res.x
+			self.W.T[userID] = res.x
+		'''
+		if self.counter%self.windowSize ==0:
+			for i in range(len(self.W)):
+				if len(self.W[i]) !=0:
+					def fun(w):
+						w = np.asarray(w)
+						res = np.sum((np.dot(self.W_X_arr[i], w) - self.W_y_arr[i])**2, axis = 0) + self.lambda_*np.linalg.norm(w)
+						return res
+					current = self.W.T[i]
+					res = minimize(fun, current, constraints = getcons(len(self.W)), method ='SLSQP', bounds=getbounds(len(self.W)), options={'disp': False})
+					self.W.T[i] = res.x
+			self.windowSize = self.windowSize*2 
 		self.CoTheta = np.dot(self.UserTheta, self.W)
 		self.BigW = np.kron(np.transpose(self.W), np.identity(n=len(articlePicked.featureVector)))
 		self.CCA = np.dot(np.dot(self.BigW , self.AInv), np.transpose(self.BigW))
@@ -136,8 +157,6 @@ class WStruct_SGD(WStruct_batch_Cons):
 	def __init__(self, featureDimension, lambda_, eta_, userNum, windowSize = 1, regu='l2'):
 		WStruct_batch_Cons.__init__(self,featureDimension = featureDimension, lambda_ = lambda_, eta_ = eta_, userNum = userNum)	
 		self.regu = regu
-		self.windowSize = windowSize
-		self.counter =0
 
 	def updateParameters(self, articlePicked, click,  userID):	
 		self.counter +=1
