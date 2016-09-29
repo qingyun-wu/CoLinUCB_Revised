@@ -1,6 +1,8 @@
 import numpy as np
 from operator import itemgetter      #for easiness in sorting and finding max and stuff
 from matplotlib.pylab import *
+import matplotlib
+matplotlib.use('Agg')
 from random import sample, choice
 from scipy.sparse import csgraph 
 import os
@@ -14,7 +16,6 @@ from LinUCB import *
 from CoLin import *
 from GOBLin import *
 from COFIBA import *
-
 from W_Alg import *
 from eGreedyUCB1 import *
 from scipy.linalg import sqrtm
@@ -79,6 +80,8 @@ class simulateOnlineData():
 				print '%.3f' % G[ui.id][i],
 			print ''
 			'''
+		#G = 1.0/n*np.ones(shape = (n, n))
+		#G = np.identity(n)
 		return G
     
     # top m users
@@ -125,6 +128,7 @@ class simulateOnlineData():
 		return W.T
 	def initializeW0(self,W):
 		W0 = W.copy()
+		#print 'WWWWWWWWWW0', W0
 		for i in range(W.shape[0]):
 			for j in range(W.shape[1]):
 				W0[i][j] = W[i][j] + self.matrixNoise()
@@ -139,7 +143,7 @@ class simulateOnlineData():
 	def initializeGW(self,G, Gepsilon):
 		n = len(self.users)	
  		L = csgraph.laplacian(G, normed = False)
- 		I = np.identity(n = G.shape[0])
+ 		I = np.identity(n = G.shape[0]) 
  		GW = I + Gepsilon*L  # W is a double stochastic matrix
  		print 'GW', GW
 		return GW.T
@@ -152,7 +156,6 @@ class simulateOnlineData():
 		return self.GW
 	def getGW0(self):
 		return self.GW0
-
 
 	def getTheta(self):
 		Theta = np.zeros(shape = (self.dimension, len(self.users)))
@@ -177,18 +180,22 @@ class simulateOnlineData():
 			ui.CoTheta = np.zeros(self.dimension)
 			for uj in self.users:
 				ui.CoTheta += self.W[uj.id][ui.id] * np.asarray(uj.theta)
-			print 'Users', ui.id, 'CoTheta', ui.CoTheta
+			#print 'Users', ui.id, 'CoTheta', ui.CoTheta
 
-	def getReward(self, user, pickedArticle):
-		return np.dot(user.CoTheta, pickedArticle.featureVector)
+	def getReward(self, user, Article):
+		reward = np.dot(user.CoTheta, Article.featureVector)
+		#print Article.id, reward
+		return reward
 
 	def GetOptimalReward(self, user, articlePool):		
 		maxReward = sys.float_info.min
+		optimalArticle = None
 		for x in articlePool:	 
 			reward = self.getReward(user, x)
 			if reward > maxReward:
 				maxReward = reward
-		return maxReward
+				optimalArticle = x
+		return maxReward, optimalArticle
 	
 	def getL2Diff(self, x, y):
 		return np.linalg.norm(x-y) # L2 norm
@@ -204,8 +211,6 @@ class simulateOnlineData():
 		for alg_name, alg in algorithms.items():
 			fileSig = 'New_' +str(alg_name) + '_UserNum'+ str(len(self.users)) + '_Sparsity' + str(self.sparseLevel) +'_Noise'+str(self.noiseLevel)+ '_matrixNoise'+str(self.matrixNoiseLevel)
 		filenameWriteResult = os.path.join(save_address, fileSig + timeRun + '.csv')
-
-
 
 		self.CoTheta()
 		self.startTime = datetime.datetime.now()
@@ -223,9 +228,7 @@ class simulateOnlineData():
 		
 		# Initialization
 		for alg_name, alg in algorithms.items():
-			BatchAverageRegret[alg_name] = []
-			
-			
+			BatchAverageRegret[alg_name] = []		
 			AccRegret[alg_name] = {}
 			if alg.CanEstimateCoUserPreference:
 				CoThetaDiffList[alg_name] = []
@@ -266,15 +269,18 @@ class simulateOnlineData():
 			for u in self.users:
 				#u = choseUser()
 				#u = choice(self.users)
+				#u = self.users[0]
 				self.regulateArticlePool() # select random articles
 
 				noise = self.noise()
 				#get optimal reward for user x at time t
-				OptimalReward = self.GetOptimalReward(u, self.articlePool) + noise
+				temp, optimalA = self.GetOptimalReward(u, self.articlePool)
+				OptimalReward = temp + noise
 							
 				for alg_name, alg in algorithms.items():
 					pickedArticle = alg.decide(self.articlePool, u.id)
-					reward = self.getReward(u, pickedArticle) + noise
+					reward = self.getReward(u, pickedArticle)  + noise
+					#print u.id, alg_name, optimalA.id,  'Selected:', pickedArticle.id
 					if alg_name =='CLUB':
 						alg.updateParameters(pickedArticle.featureVector, reward, u.id)
 						n_components= alg.updateGraphClusters(u.id,'False')
@@ -287,6 +293,7 @@ class simulateOnlineData():
 						alg.updateParameters(pickedArticle, reward, u.id)
 
 					regret = OptimalReward - reward	
+
 					AccRegret[alg_name][u.id].append(regret)
 
 					# every algorithm will estimate co-theta
@@ -375,11 +382,13 @@ class simulateOnlineData():
 		axa[2].set_yscale('log')
 		axa[2].set_title("Parameter estimation error")
 		'''
+		plt.savefig('./SimulationResults/Regret' + str(timeRun_Save )+'.pdf')
 		plt.show()
+		#plt.savefig('./SimulationResults/Regret' + str(timeRun_Save )+'.pdf')
 
 
 if __name__ == '__main__':
-	iterations = 100
+	iterations = 200
 	NoiseScale = .1
 	matrixNoise = 0.3
 
@@ -411,8 +420,8 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description = '')
 	parser.add_argument('--alg', dest='alg', help='Select a specific algorithm, could be CoLin, GOBLin, AsyncCoLin, or SyncCoLin')
 
-	parser.add_argument('--showheatmap', action='store_true',
-	                help='Show heatmap of relation matrix.') 
+	parser.add_argument('--RankoneInverse', action='store_true',
+	                help='Use Rankone Correction to do matrix inverse') 
 	parser.add_argument('--userNum', dest = 'userNum', help = 'Set the userNum, can be 40, 80, 100')
 	parser.add_argument('--Sparsity', dest = 'SparsityLevel', help ='Set the SparsityLevel by choosing the top M most connected users, should be smaller than userNum, when equal to userNum, we are using a full connected graph')
 	parser.add_argument('--NoiseScale', dest = 'NoiseScale', help = 'Set NoiseScale')
@@ -424,7 +433,7 @@ if __name__ == '__main__':
 	sparseLevel = int(args.SparsityLevel)
 	NoiseScale = float(args.NoiseScale)
 	matrixNoise = float(args.matrixNoise)
-	
+	RankoneInverse =args.RankoneInverse
 	
 	userFilename = os.path.join(sim_files_folder, "users_"+str(n_users)+"+dim-"+str(dimension)+ "Ugroups" + str(UserGroups)+".json")
 	
@@ -460,11 +469,14 @@ if __name__ == '__main__':
 	algorithms = {}
 	
 	if algName == 'LinUCB':
-		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
+		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, RankoneInverse = RankoneInverse)
 	if algName == 'GOBLin':
-		algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
+		algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW(), RankoneInverse = RankoneInverse )
 	if algName =='CoLin':
-		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
+		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW(), RankoneInverse = RankoneInverse)
+		#algorithms['CoLin_2'] = CoLinAlgorithm_2(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse = RankoneInverse)
+	if algName == 'CoLinRank1':
+		algorithms['CoLinRank1'] = CoLinRankoneAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse = RankoneInverse)
 	if algName == 'HybridLinUCB':
 		algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()))
 	if algName =='CLUB':
@@ -472,25 +484,20 @@ if __name__ == '__main__':
 	if algName == 'COFIBA':
 		algorithms['COFIBA'] = COFIBAAlgorithm(dimension = dimension, alpha = alpha,alpha_2 = CLUB_alpha_2,lambda_ = lambda_, n = n_users,itemNum= n_articles,cluster_init = 'Erdos-Renyi')
 	if algName =='ALL':
-		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users)
-		#algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()))
-		#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW() )
-		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0())
+		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, RankoneInverse = RankoneInverse)
+		#algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()),RankoneInverse = RankoneInverse )
+		#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW(), RankoneInverse = RankoneInverse )
+		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW(), RankoneInverse=RankoneInverse)
 		#algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2)	
-		#algorithms['Learn_W'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
-		#algorithms['LearnW_W0'] = LearnW_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
-		#algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
-		#algorithms['W0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
-		algorithms['COFIBA'] = COFIBAAlgorithm(dimension = dimension, alpha = alpha,alpha_2 = CLUB_alpha_2,lambda_ = lambda_, n = n_users,itemNum= n_articles,cluster_init = 'Erdos-Renyi')
-		algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2, cluster_init = 'Erdos-Renyi')	
+		algorithms['Learn_WBatch_cons'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+ 		#algorithms['Learn_W-SGD'] =  LearnWAlgorithm_SGD(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+		#algorithms['COFIBA'] = COFIBAAlgorithm(dimension = dimension, alpha = alpha,alpha_2 = CLUB_alpha_2,lambda_ = lambda_, n = n_users,itemNum= n_articles,cluster_init = 'Erdos-Renyi')
+		#algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2, cluster_init = 'Erdos-Renyi')	
 
 	if algName == 'LearnW':
-		algorithms['WCoLinUCB'] =  WAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
-	if algName == 'WknowTheta':
-		algorithms['WknowTheta'] = WknowThetaAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, theta = simExperiment.getTheta())
-	if algName == 'WknowW0':
-		algorithms['WknowW0'] = W_W0_Algorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users, W0 = simExperiment.getW0())
-
+		algorithms['Learn_WBatch_cons'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+		#algorithms['Learn_W-SGD'] =  LearnWAlgorithm_SGD(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+	
 	#algorithms['eGreedy'] = eGreedyAlgorithm(epsilon = eGreedy)
 	#algorithms['UCB1'] = UCB1Algorithm()
 	

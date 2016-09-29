@@ -11,7 +11,7 @@ from CoLin import CoLinAlgorithm, CoLin_SelectUserAlgorithm
 
 
 class GOBLinSharedStruct:
-	def __init__(self, featureDimension, lambda_, userNum, W):
+	def __init__(self, featureDimension, lambda_, userNum, W, RankoneInverse):
 		self.W = W
 		self.userNum = userNum
 		self.A = lambda_*np.identity(n = featureDimension*userNum)
@@ -21,17 +21,22 @@ class GOBLinSharedStruct:
 		self.theta = np.dot(self.AInv , self.b)
 		self.STBigWInv = sqrtm( np.linalg.inv(np.kron(W, np.identity(n=featureDimension))) )
 		self.STBigW = sqrtm(np.kron(W, np.identity(n=featureDimension)))
+		self.RankoneInverse = RankoneInverse
 	def updateParameters(self, articlePicked, click, userID):
 		featureVectorM = np.zeros(shape =(len(articlePicked.featureVector), self.userNum))
 		featureVectorM.T[userID] = articlePicked.featureVector
 		featureVectorV = vectorize(featureVectorM)
 
 		CoFeaV = np.dot(self.STBigWInv, featureVectorV)
-		self.A += np.outer(CoFeaV, CoFeaV)
-		self.b += click * CoFeaV
+		self.A = self.A + np.outer(CoFeaV, CoFeaV)
+		self.b = self.b + click * CoFeaV
 
-		self.AInv = np.linalg.inv(self.A)
-
+		if self.RankoneInverse:
+			temp = np.dot(self.AInv, CoFeaV)
+			self.AInv = self.AInv - (np.outer(temp,temp))/(1.0+np.dot(np.transpose(CoFeaV),temp))
+		else:
+			self.AInv =  np.linalg.inv(self.A)
+	
 		self.theta = np.dot(self.AInv, self.b)
 	def getProb(self,alpha , article, userID):
 		
@@ -50,9 +55,9 @@ class GOBLinSharedStruct:
 		return pta
 # inherite from CoLinUCBAlgorithm
 class GOBLinAlgorithm(CoLinAlgorithm):
-	def __init__(self, dimension, alpha, lambda_, n, W):
-		CoLinAlgorithm.__init__(self, dimension, alpha, lambda_, n, W)
-		self.USERS = GOBLinSharedStruct(dimension, lambda_, n, W)
+	def __init__(self, dimension, alpha, lambda_, n, W, RankoneInverse = False):
+		CoLinAlgorithm.__init__(self, dimension, alpha, lambda_, n, W, RankoneInverse)
+		self.USERS = GOBLinSharedStruct(dimension, lambda_, n, W, RankoneInverse)
 
 		self.CanEstimateCoUserPreference = True 
 		self.CanEstimateUserPreference = False
@@ -63,8 +68,8 @@ class GOBLinAlgorithm(CoLinAlgorithm):
 
 #inherite from CoLinUCB_SelectUserAlgorithm
 class GOBLin_SelectUserAlgorithm(CoLin_SelectUserAlgorithm):
-	def __init__(self, dimension, alpha, lambda_, n, W):
-		CoLinUCB_SelectUserAlgorithm.__init__(self, dimension, alpha, lambda_, n, W)
+	def __init__(self, dimension, alpha, lambda_, n, W, RankoneInverse = False):
+		CoLinUCB_SelectUserAlgorithm.__init__(self, dimension, alpha, lambda_, n, W, RankoneInverse)
 		self.USERS = GOBLinSharedStruct(dimension, lambda_, n, W)
 	def getCoTheta(self, userID):
 		thetaMatrix =  matrixize(self.USERS.theta, self.dimension) 
