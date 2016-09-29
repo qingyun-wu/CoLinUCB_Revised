@@ -74,6 +74,7 @@ class COFIBAAlgorithm(LinUCBAlgorithm):
 			self.Uclusters.append([])
 			N_components_U, components_U = connected_components(csr_matrix(self.UGraph[i]))
 			self.Uclusters[i] = components_U
+		self.UserNeighbor = {}
 
 		self.CanEstimateCoUserPreference = False
 		self.CanEstimateUserPreference = False
@@ -116,16 +117,16 @@ class COFIBAAlgorithm(LinUCBAlgorithm):
 	def updateItemClusters(self, userID, chosenItem, itemClusterNum, articlePool):
 		m = self.itemNum
 		n = len(self.users)
-		UserNeighbor = {}
+		#UserNeighbor = {}
 		for a in articlePool:
 			if self.IGraph[chosenItem.id][a.id] == 1:
-				UserNeighbor[a.id] = np.ones([n,n])
+				#UserNeighbor[a.id] = np.ones([n,n])
 				for i in range(n):
 					diff = math.fabs(np.dot( self.users[userID].UserTheta, a.featureVector )- np.dot( self.users[i].UserTheta, a.featureVector))
 					CB = self.alpha_2* (np.sqrt(np.dot(np.dot(a.featureVector, self.users[userID].AInv),  a.featureVector)) + np.sqrt(np.dot(np.dot(a.featureVector, self.users[i].AInv),  a.featureVector))) * np.sqrt(np.log10(self.time+1))
 					if diff > CB:
-						UserNeighbor[a.id][userID][i] = 0
-						UserNeighbor[a.id][i][userID] = 0
+						self.UserNeighbor[a.id][userID][i] = 0
+						self.UserNeighbor[a.id][i][userID] = 0
 				if not np.array_equal(UserNeighbor[a.id], self.UGraph[itemClusterNum]):
 					self.IGraph[chosenItem.id][a.id] = 0
 					self.IGraph[a.id][chosenItem.id] = 0
