@@ -17,10 +17,12 @@ from CoLin import *
 from GOBLin import *
 from COFIBA import *
 from W_Alg import *
+#from LearnW import *
 from eGreedyUCB1 import *
 from scipy.linalg import sqrtm
 import math
 import argparse
+import matplotlib.pyplot as plt
 
 from sklearn.decomposition import TruncatedSVD
 
@@ -43,7 +45,7 @@ class simulateOnlineData():
 		self.iterations = iterations
 		self.noise = noise
 		self.matrixNoise = matrixNoise
-		print matrixNoise
+
 		self.articles = articles 
 		self.users = users
 
@@ -337,9 +339,16 @@ class simulateOnlineData():
 					f.write(','+ ','.join([str(ThetaDiffList[alg_name][-1]) for alg_name in WDiffList.iterkeys()]))
 					f.write('\n')
 				'''
-		# plot the results		
+		# plot the results	
+		#showheatmap(self.W.T)
+		for alg_name, alg in algorithms.items():
+
+			#alg.showLearntWheatmap()
+			print alg_name, ConnectionDiff(self.W, alg.getWholeW())
+			print alg.getWholeW()
+
 		f, axa = plt.subplots(2, sharex=True)
-		for alg_name in algorithms.iterkeys():	
+		for alg_name, alg in algorithms.items():
 			axa[0].plot(tim_, BatchAverageRegret[alg_name],label = alg_name)
 			with open(filenameWriteResult, 'a+') as f:
 				f.write(str(alg_name)+ ','+ str( BatchAverageRegret[alg_name][-1]))
@@ -384,7 +393,7 @@ class simulateOnlineData():
 		'''
 		plt.savefig('./SimulationResults/Regret' + str(timeRun_Save )+'.pdf')
 		plt.show()
-		#plt.savefig('./SimulationResults/Regret' + str(timeRun_Save )+'.pdf')
+		plt.savefig('./SimulationResults/Regret' + str(timeRun_Save )+'.pdf')
 
 
 if __name__ == '__main__':
@@ -426,6 +435,7 @@ if __name__ == '__main__':
 	parser.add_argument('--Sparsity', dest = 'SparsityLevel', help ='Set the SparsityLevel by choosing the top M most connected users, should be smaller than userNum, when equal to userNum, we are using a full connected graph')
 	parser.add_argument('--NoiseScale', dest = 'NoiseScale', help = 'Set NoiseScale')
 	parser.add_argument('--matrixNoise', dest = 'matrixNoise', help = 'Set MatrixNoiseScale')
+	#parser.add_argument('--WindowSize', dest = 'WindowSize', help = 'Set the Init WindowSize')
 	args = parser.parse_args()
 
 	algName = str(args.alg)
@@ -434,6 +444,7 @@ if __name__ == '__main__':
 	NoiseScale = float(args.NoiseScale)
 	matrixNoise = float(args.matrixNoise)
 	RankoneInverse =args.RankoneInverse
+	#WindowSize = int(WindowSize)
 	
 	userFilename = os.path.join(sim_files_folder, "users_"+str(n_users)+"+dim-"+str(dimension)+ "Ugroups" + str(UserGroups)+".json")
 	
@@ -465,7 +476,7 @@ if __name__ == '__main__':
 	print "Starting for ", simExperiment.simulation_signature
 	#userFeature = simExperiment.generateUserFeature(simExperiment.getW())
 	#print 'FeatureFunc', userFeature
-	
+	#for i in range(10):
 	algorithms = {}
 	
 	if algName == 'LinUCB':
@@ -484,19 +495,29 @@ if __name__ == '__main__':
 	if algName == 'COFIBA':
 		algorithms['COFIBA'] = COFIBAAlgorithm(dimension = dimension, alpha = alpha,alpha_2 = CLUB_alpha_2,lambda_ = lambda_, n = n_users,itemNum= n_articles,cluster_init = 'Erdos-Renyi')
 	if algName =='ALL':
-		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, RankoneInverse = RankoneInverse)
 		#algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()),RankoneInverse = RankoneInverse )
 		#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW(), RankoneInverse = RankoneInverse )
-		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW(), RankoneInverse=RankoneInverse)
 		#algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2)	
-		algorithms['Learn_WBatch_cons'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
- 		#algorithms['Learn_W-SGD'] =  LearnWAlgorithm_SGD(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+
+		#algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, RankoneInverse = RankoneInverse)
+		#algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse=RankoneInverse)
+		algorithms['CoLin_TrueW'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW(), RankoneInverse=RankoneInverse)
+		algorithms['LearnW'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), windowSize = 2, RankoneInverse=RankoneInverse)
+		#algorithms['LearnW_alpha_t'] =  LearnWAlgorithm_change(dimension = dimension, alpha= alpha, lambda_ = lambda_, n = n_users,W = simExperiment.getW(), windowSize = 1, RankoneInverse=RankoneInverse)
+		#algorithms['LearnW_shrinkExplore'] =  LearnWAlgorithm_update(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, windowSize = 1, RankoneInverse=RankoneInverse)	
+		#algorithms['LearnW_WExplore'] =  LearnWAlgorithm_WExploration(dimension = dimension, alpha= alpha, lambda_ = lambda_, n = n_users, windowSize = 1, RankoneInverse=RankoneInverse)
+		#algorithms['LearnW_HistoricalW'] =  LearnWAlgorithm_historical(dimension = dimension, alpha= alpha, lambda_ = lambda_, n = n_users, windowSize = 1, RankoneInverse=RankoneInverse)
+
+
+		#algorithms['Learn_W'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), windowSize = 1, RankoneInverse=RankoneInverse)
+
+ 		#algorithms['Learn_W-SGD'] =  LearnWAlgorithm_SGD(dimension = dimension, alpha = alpha, lambda_ = lambda_,  n = n_users,windowSize = n_users, RankoneInverse=RankoneInverse)
 		#algorithms['COFIBA'] = COFIBAAlgorithm(dimension = dimension, alpha = alpha,alpha_2 = CLUB_alpha_2,lambda_ = lambda_, n = n_users,itemNum= n_articles,cluster_init = 'Erdos-Renyi')
 		#algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2, cluster_init = 'Erdos-Renyi')	
 
 	if algName == 'LearnW':
-		algorithms['Learn_WBatch_cons'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
-		#algorithms['Learn_W-SGD'] =  LearnWAlgorithm_SGD(dimension = dimension, alpha = alpha, lambda_ = lambda_, eta_ = eta_, n = n_users)
+		algorithms['Learn_W'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_,  n = n_users, windowSize = n_users, RankoneInverse=RankoneInverse)
+		#algorithms['Learn_W-SGD'] =  LearnWAlgorithm_SGD(dimension = dimension, alpha = alpha, lambda_ = lambda_,  n = n_users, windowSize = n_users,RankoneInverse=RankoneInverse)
 	
 	#algorithms['eGreedy'] = eGreedyAlgorithm(epsilon = eGreedy)
 	#algorithms['UCB1'] = UCB1Algorithm()
