@@ -25,7 +25,7 @@ import argparse
 import matplotlib.pyplot as plt
 
 from sklearn.decomposition import TruncatedSVD
-
+# Command Line: python Simulation.py --alg ALL --userNum 10 --Sparsity 10 --NoiseScale 0.01 --matrixNoise 0.001
 
 class simulateOnlineData():
 	def __init__(self, dimension, iterations, articles, users, 
@@ -342,10 +342,8 @@ class simulateOnlineData():
 		# plot the results	
 		#showheatmap(self.W.T)
 		for alg_name, alg in algorithms.items():
-
+			pass
 			#alg.showLearntWheatmap()
-			print alg_name, ConnectionDiff(self.W, alg.getWholeW())
-			print alg.getWholeW()
 
 		f, axa = plt.subplots(2, sharex=True)
 		for alg_name, alg in algorithms.items():
@@ -398,8 +396,8 @@ class simulateOnlineData():
 
 if __name__ == '__main__':
 	iterations = 200
-	NoiseScale = .1
-	matrixNoise = 0.3
+	NoiseScale = .01
+	matrixNoise = 0.001
 
 	dimension = 5
 	alpha  = 0.2
@@ -499,10 +497,10 @@ if __name__ == '__main__':
 		#algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW(), RankoneInverse = RankoneInverse )
 		#algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2)	
 
-		#algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, RankoneInverse = RankoneInverse)
-		#algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse=RankoneInverse)
-		algorithms['CoLin_TrueW'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW(), RankoneInverse=RankoneInverse)
-		algorithms['LearnW'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), windowSize = 2, RankoneInverse=RankoneInverse)
+		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, RankoneInverse = RankoneInverse)
+		algorithms['CoLin_NoisyW'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse=RankoneInverse)
+		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW(), RankoneInverse=RankoneInverse)
+		#algorithms['LearnW'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), windowSize = 2, RankoneInverse=RankoneInverse)
 		#algorithms['LearnW_alpha_t'] =  LearnWAlgorithm_change(dimension = dimension, alpha= alpha, lambda_ = lambda_, n = n_users,W = simExperiment.getW(), windowSize = 1, RankoneInverse=RankoneInverse)
 		#algorithms['LearnW_shrinkExplore'] =  LearnWAlgorithm_update(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, windowSize = 1, RankoneInverse=RankoneInverse)	
 		#algorithms['LearnW_WExplore'] =  LearnWAlgorithm_WExploration(dimension = dimension, alpha= alpha, lambda_ = lambda_, n = n_users, windowSize = 1, RankoneInverse=RankoneInverse)

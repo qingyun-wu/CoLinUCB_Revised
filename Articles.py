@@ -47,39 +47,20 @@ class ArticleManager():
 		articles_id = {}
 		mask = self.generateMasks()
 
-		for i in range(self.ArticleGroups):
-			articles_id[i] = range((self.n_articles*i)/self.ArticleGroups, (self.n_articles*(i+1))/self.ArticleGroups)
+		if self.ArticleGroups > 1:
+			for i in range(self.ArticleGroups):
+				articles_id[i] = range((self.n_articles*i)/self.ArticleGroups, (self.n_articles*(i+1))/self.ArticleGroups)
 
-			for key in articles_id[i]:
-				featureVector = np.multiply(featureUniform(self.dimension, {}), mask[i])
+				for key in articles_id[i]:
+					featureVector = np.multiply(featureUniform(self.dimension, {}), mask[i])
+					l2_norm = np.linalg.norm(featureVector, ord =2)
+					articles.append(Article(key, featureVector/l2_norm ))
+
+		else:
+			for i in range(self.n_articles):
+				featureVector = featureUniform(self.dimension, {})
 				l2_norm = np.linalg.norm(featureVector, ord =2)
-				articles.append(Article(key, featureVector/l2_norm ))
-
-		# Hardcode five article groups
-		'''
-		articles_id_1 = range(self.n_articles/5)
-		articles_id_2 = range(self.n_articles/5,self.n_articles*2/5)
-		articles_id_3 = range((self.n_articles*2)/5,(self.n_articles*3)/5)
-		articles_id_4 = range(self.n_articles*3/5,self.n_articles*4/5)
-		articles_id_5 = range(self.n_articles*4/5,self.n_articles*5/5)
-
-		mask1 = [1,1,0,0,0]
-		mask2 = [1,0,0,0,1]
-		mask3 = [0,0,0,1,1]
-		mask4 = [1,0,1,0,0]
-		mask5 = [0,1,0,1,0]
-
-		for key in articles_id_1:
-			articles.append(Article(key,  np.multiply(featureUniform(self.dimension, {}), mask1)))
-		for key in articles_id_2:
-			articles.append(Article(key, np.multiply(featureUniform(self.dimension, {}), mask2)))
-		for key in articles_id_3:
-			articles.append(Article(key, np.multiply(featureUniform(self.dimension,{}), mask3)))
-		for key in articles_id_4:
-			articles.append(Article(key, np.multiply(featureUniform(self.dimension,{}), mask4)))
-		for key in articles_id_5:
-			articles.append(Article(key, np.multiply(featureUniform(self.dimension,{}), mask5)))
-		'''
+				articles.append(Article(i, featureVector/l2_norm ))
 	
 		return articles
 

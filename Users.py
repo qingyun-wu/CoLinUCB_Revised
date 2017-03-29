@@ -47,13 +47,18 @@ class UserManager():
 		usersids = {}
 		users = []
 		mask = self.generateMasks()
+		if self.UserGroups >1:
+			for i in range(self.UserGroups):
+				usersids[i] = range(self.userNum*i/self.UserGroups, (self.userNum*(i+1))/self.UserGroups)
 
-		for i in range(self.UserGroups):
-			usersids[i] = range(self.userNum*i/self.UserGroups, (self.userNum*(i+1))/self.UserGroups)
-
-			for key in usersids[i]:
-				thetaVector = np.multiply(self.thetaFunc(self.dimension, argv = self.argv), mask[i])
-				l2_norm = np.linalg.norm(thetaVector, ord =2)
-				users.append(User(key, thetaVector/l2_norm))
+				for key in usersids[i]:
+					thetaVector = np.multiply(self.thetaFunc(self.dimension, argv = self.argv), mask[i])
+					l2_norm = np.linalg.norm(thetaVector, ord =2)
+					users.append(User(key, thetaVector/l2_norm))
+		else:
+			for i in range(self.userNum):
+				thetaVector = self.thetaFunc(self.dimension, argv = self.argv)
+				theta_l2_norm = np.linalg.norm(thetaVector, ord =2)
+				users.append(User(i, thetaVector/theta_l2_norm))
 		return users
 
