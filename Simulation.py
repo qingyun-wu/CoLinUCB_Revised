@@ -55,10 +55,10 @@ class simulateOnlineData():
 		self.W = self.initializeW(sparseLevel,epsilon)
 
 		W = self.W.copy()
-		self.W0 = self.initializeW0(W)
+		self.NoisyW = self.initializeNoisyW(W)
 		self.GW = self.initializeGW(W,Gepsilon)
-		W0 = self.W0.copy()
-		self.GW0 = self.initializeGW(W0,Gepsilon)
+		NoisyW = self.NoisyW.copy()
+		self.GNoisyW = self.initializeGW(NoisyW,Gepsilon)
 		self.noiseLevel = noiseLevel
 		self.matrixNoiseLevel = matrixNoiseLevel
 
@@ -128,19 +128,19 @@ class simulateOnlineData():
  			W = self.constructSparseMatrix(sparseLevel)   # sparse matrix top m users 
  		print 'W.T', W.T
 		return W.T
-	def initializeW0(self,W):
-		W0 = W.copy()
-		#print 'WWWWWWWWWW0', W0
+	def initializeNoisyW(self,W):
+		NoisyW = W.copy()
+		#print 'WWWWWWWWWNoisyW', NoisyW
 		for i in range(W.shape[0]):
 			for j in range(W.shape[1]):
-				W0[i][j] = W[i][j] + self.matrixNoise()
-				if W0[i][j] < 0:
-					W0[i][j] = 0
-			W0[i] /= sum(W0[i]) 
-		#W0 = np.random.random((W.shape[0], W.shape[1]))  #test random ini
-		print 'W0.T', W0.T
+				NoisyW[i][j] = W[i][j] + self.matrixNoise()
+				if NoisyW[i][j] < 0:
+					NoisyW[i][j] = 0
+			NoisyW[i] /= sum(NoisyW[i]) 
+		#NoisyW = np.random.random((W.shape[0], W.shape[1]))  #test random ini
+		print 'NoisyW.T', NoisyW.T
 
-		return W0.T
+		return NoisyW.T
 
 	def initializeGW(self,G, Gepsilon):
 		n = len(self.users)	
@@ -152,12 +152,12 @@ class simulateOnlineData():
 
 	def getW(self):
 		return self.W
-	def getW0(self):
-		return self.W0
+	def getNoisyW(self):
+		return self.NoisyW
 	def getGW(self):
 		return self.GW
-	def getGW0(self):
-		return self.GW0
+	def getGNoisyW(self):
+		return self.GNoisyW
 
 	def getTheta(self):
 		Theta = np.zeros(shape = (self.dimension, len(self.users)))
@@ -380,7 +380,7 @@ class simulateOnlineData():
 
 		'''
 		for alg_name in algorithms.iterkeys():
-			if alg_name == 'WCoLinUCB' or alg_name =='W_W0' or alg_name =='WknowTheta':
+			if alg_name == 'WCoLinUCB' or alg_name =='W_NoisyW' or alg_name =='WknowTheta':
 				axa[2].plot(time, WDiffList[alg_name], label = alg_name + '_W')
 		
 		axa[2].legend(loc='upper right',prop={'size':6})
@@ -483,9 +483,9 @@ if __name__ == '__main__':
 		algorithms['GOBLin'] = GOBLinAlgorithm( dimension= dimension, alpha = G_alpha, lambda_ = G_lambda_, n = n_users, W = simExperiment.getGW(), RankoneInverse = RankoneInverse )
 	if algName =='CoLin':
 		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW(), RankoneInverse = RankoneInverse)
-		#algorithms['CoLin_2'] = CoLinAlgorithm_2(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse = RankoneInverse)
+		#algorithms['CoLin_2'] = CoLinAlgorithm_2(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getNoisyW(), RankoneInverse = RankoneInverse)
 	if algName == 'CoLinRank1':
-		algorithms['CoLinRank1'] = CoLinRankoneAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse = RankoneInverse)
+		algorithms['CoLinRank1'] = CoLinRankoneAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getNoisyW(), RankoneInverse = RankoneInverse)
 	if algName == 'HybridLinUCB':
 		algorithms['HybridLinUCB'] = Hybrid_LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, userFeatureList=simExperiment.generateUserFeature(simExperiment.getW()))
 	if algName =='CLUB':
@@ -498,16 +498,16 @@ if __name__ == '__main__':
 		#algorithms['CLUB'] = CLUBAlgorithm(dimension =dimension,alpha = alpha, lambda_ = lambda_, n = n_users, alpha_2 = CLUB_alpha_2)	
 
 		algorithms['LinUCB'] = LinUCBAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, RankoneInverse = RankoneInverse)
-		algorithms['CoLin_NoisyW'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), RankoneInverse=RankoneInverse)
+		algorithms['CoLin_NoisyW'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getNoisyW(), RankoneInverse=RankoneInverse)
 		algorithms['CoLin'] = CoLinAlgorithm(dimension=dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW(), RankoneInverse=RankoneInverse)
-		#algorithms['LearnW'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), windowSize = 2, RankoneInverse=RankoneInverse)
+		#algorithms['LearnW'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getNoisyW(), windowSize = 2, RankoneInverse=RankoneInverse)
 		#algorithms['LearnW_alpha_t'] =  LearnWAlgorithm_change(dimension = dimension, alpha= alpha, lambda_ = lambda_, n = n_users,W = simExperiment.getW(), windowSize = 1, RankoneInverse=RankoneInverse)
 		#algorithms['LearnW_shrinkExplore'] =  LearnWAlgorithm_update(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, windowSize = 1, RankoneInverse=RankoneInverse)	
 		#algorithms['LearnW_WExplore'] =  LearnWAlgorithm_WExploration(dimension = dimension, alpha= alpha, lambda_ = lambda_, n = n_users, windowSize = 1, RankoneInverse=RankoneInverse)
 		#algorithms['LearnW_HistoricalW'] =  LearnWAlgorithm_historical(dimension = dimension, alpha= alpha, lambda_ = lambda_, n = n_users, windowSize = 1, RankoneInverse=RankoneInverse)
 
 
-		#algorithms['Learn_W'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getW0(), windowSize = 1, RankoneInverse=RankoneInverse)
+		#algorithms['Learn_W'] =  LearnWAlgorithm(dimension = dimension, alpha = alpha, lambda_ = lambda_, n = n_users, W = simExperiment.getNoisyW(), windowSize = 1, RankoneInverse=RankoneInverse)
 
  		#algorithms['Learn_W-SGD'] =  LearnWAlgorithm_SGD(dimension = dimension, alpha = alpha, lambda_ = lambda_,  n = n_users,windowSize = n_users, RankoneInverse=RankoneInverse)
 		#algorithms['COFIBA'] = COFIBAAlgorithm(dimension = dimension, alpha = alpha,alpha_2 = CLUB_alpha_2,lambda_ = lambda_, n = n_users,itemNum= n_articles,cluster_init = 'Erdos-Renyi')
