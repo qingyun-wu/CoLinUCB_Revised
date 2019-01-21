@@ -120,14 +120,32 @@ def evaluateGradient(x,y,theta, lambda_, regu ):
 		grad = x*(np.dot(np.transpose(x),theta) - y) + lambda_*theta           # Ridge                      
 	return grad
 
+#def getcons(dim):
+#	cons = []
+#	cons.append({'type': 'eq','fun': lambda x : np.sum(x)-1})
+#
+#	for i in range(dim):
+#		cons.append({'type' : 'ineq','fun' : lambda  x: x[i] })
+#		cons.append({'type' : 'ineq','fun' : lambda x: 1-x[i]})
+#	
+#	return tuple(cons)
+
+def constraint_function_factory1(index):
+	def func(x):
+		return x[index]
+	return func
+def constraint_function_factory2(index):
+	def func(x):
+		return 1 - x[index]
+	return func
 def getcons(dim):
 	cons = []
 	cons.append({'type': 'eq','fun': lambda x : np.sum(x)-1})
 
 	for i in range(dim):
-		cons.append({'type' : 'ineq','fun' : lambda  x: x[i] })
-		cons.append({'type' : 'ineq','fun' : lambda x: 1-x[i]})
-	
+		cons.append({'type' : 'ineq', 'fun': constraint_function_factory1(i)})
+		cons.append({'type' : 'ineq', 'fun': constraint_function_factory2(i)})
+
 	return tuple(cons)
 def getbounds(dim):
 	bnds = []
